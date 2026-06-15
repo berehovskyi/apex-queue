@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastEnqueuedAt__c</fullName>
+    <description>Timestamp when the scheduler last materialized a queue job.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>When this scheduler last created a Job__c row.</inlineHelpText>
+    <label>Last Enqueued At</label>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>DateTime</type>
+</CustomField>

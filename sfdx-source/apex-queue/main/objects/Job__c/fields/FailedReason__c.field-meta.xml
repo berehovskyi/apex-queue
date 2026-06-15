@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Failure reason captured from the most recent failed attempt.</description>
+    <fullName>FailedReason__c</fullName>
+    <inlineHelpText>Last failure message or exception summary for the job.</inlineHelpText>
+    <label>Failed Reason</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NextRunAt__c</fullName>
+    <description>Durable next occurrence represented by this scheduler state.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Next scheduler occurrence known to the framework.</inlineHelpText>
+    <label>Next Run At</label>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>DateTime</type>
+</CustomField>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>State__c</fullName>
+    <description>Durable runtime lifecycle state for this job.</description>
+    <inlineHelpText>Current queue state such as waiting, delayed, active, completed, failed, or canceled.</inlineHelpText>
+    <label>State</label>
+    <required>true</required>
+    <trackHistory>true</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>true</sorted>
+            <value>
+                <fullName>ACTIVE</fullName>
+                <default>false</default>
+                <label>Active</label>
+            </value>
+            <value>
+                <fullName>CANCELED</fullName>
+                <default>false</default>
+                <label>Canceled</label>
+            </value>
+            <value>
+                <fullName>COMPLETED</fullName>
+                <default>false</default>
+                <label>Completed</label>
+            </value>
+            <value>
+                <fullName>DELAYED</fullName>
+                <default>false</default>
+                <label>Delayed</label>
+            </value>
+            <value>
+                <fullName>FAILED</fullName>
+                <default>false</default>
+                <label>Failed</label>
+            </value>
+            <value>
+                <fullName>PAUSED</fullName>
+                <default>false</default>
+                <label>Paused</label>
+            </value>
+            <value>
+                <fullName>WAITING</fullName>
+                <default>true</default>
+                <label>Waiting</label>
+            </value>
+            <value>
+                <fullName>WAITING_CHILDREN</fullName>
+                <default>false</default>
+                <label>Waiting Children</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

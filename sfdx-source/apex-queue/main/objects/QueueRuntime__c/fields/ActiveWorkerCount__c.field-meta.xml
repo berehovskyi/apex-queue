@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ActiveWorkerCount__c</fullName>
+    <defaultValue>0</defaultValue>
+    <description>Cached count of in-flight worker executions currently associated with this queue.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Used for queue-level liveness and operational visibility.</inlineHelpText>
+    <label>Active Worker Count</label>
+    <precision>18</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

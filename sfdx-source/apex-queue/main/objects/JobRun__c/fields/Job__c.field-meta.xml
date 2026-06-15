@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Job__c</fullName>
+    <description>Master queue job that owns this attempt log.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Parent queue job for this run record.</inlineHelpText>
+    <label>Job</label>
+    <referenceTo>Job__c</referenceTo>
+    <reparentableMasterDetail>false</reparentableMasterDetail>
+    <relationshipLabel>Runs</relationshipLabel>
+    <relationshipName>Runs</relationshipName>
+    <trackTrending>false</trackTrending>
+    <type>MasterDetail</type>
+    <writeRequiresMasterRead>false</writeRequiresMasterRead>
+</CustomField>

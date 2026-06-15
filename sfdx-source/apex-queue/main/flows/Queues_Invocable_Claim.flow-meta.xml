@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <name>Claim_Invocable_Job</name>
+        <label>Claim Invocable Job</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <actionName>QueuesInvocableAction</actionName>
+        <actionType>apex</actionType>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>jobId</name>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>phase</name>
+            <value>
+                <stringValue>CLAIM</stringValue>
+            </value>
+        </inputParameters>
+        <nameSegment>QueuesInvocableAction</nameSegment>
+    </actionCalls>
+    <apiVersion>67.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <interviewLabel>Queues Invocable Claim {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Queues: Invocable Job Claim</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <filterFormula>AND(
+            TEXT({!$Record.ExecutionMode__c}) = &quot;INVOCABLE&quot;,
+            OR(
+            TEXT({!$Record.State__c}) = &quot;WAITING&quot;,
+            TEXT({!$Record.State__c}) = &quot;DELAYED&quot;
+            ),
+            OR(
+            NOT(TEXT({!$Record.State__c}) = TEXT({!$Record__Prior.State__c})),
+            NOT({!$Record.AvailableAt__c} = {!$Record__Prior.AvailableAt__c})
+            )
+            )</filterFormula>
+        <object>Job__c</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <scheduledPaths>
+            <name>AvailableAt_Path</name>
+            <connector>
+                <targetReference>Claim_Invocable_Job</targetReference>
+            </connector>
+            <label>AvailableAt Path</label>
+            <maxBatchSize>100</maxBatchSize>
+            <offsetNumber>0</offsetNumber>
+            <offsetUnit>Minutes</offsetUnit>
+            <recordField>AvailableAt__c</recordField>
+            <timeSource>RecordField</timeSource>
+        </scheduledPaths>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Serialized processor return payload for completed jobs.</description>
+    <fullName>ReturnValue__c</fullName>
+    <inlineHelpText>Completion payload or result returned by the processor.</inlineHelpText>
+    <label>Return Value</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>

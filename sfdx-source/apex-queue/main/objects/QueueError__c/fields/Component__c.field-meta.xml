@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Component__c</fullName>
+    <description>Queue subsystem component or phase that failed.</description>
+    <inlineHelpText>Queue subsystem component or phase that failed.</inlineHelpText>
+    <label>Component</label>
+    <length>120</length>
+    <required>true</required>
+    <type>Text</type>
+</CustomField>

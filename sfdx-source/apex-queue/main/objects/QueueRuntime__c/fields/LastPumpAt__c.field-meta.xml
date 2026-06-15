@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastPumpAt__c</fullName>
+    <description>Last time the queue worker loop touched or refreshed this runtime row.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Most recent time the worker loop executed or refreshed this queue.</inlineHelpText>
+    <label>Last Pump At</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ExternalId__c</fullName>
+    <caseSensitive>false</caseSensitive>
+    <description>Optional caller-provided external identifier used for dedupe or idempotent enqueue behavior. Length is capped so QueueName__c + ":" + ExternalId__c fits the internal queue-scoped unique key.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Optional stable external id used for dedupe or idempotent enqueue behavior. Maximum length is 174 characters.</inlineHelpText>
+    <label>External Id</label>
+    <length>174</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

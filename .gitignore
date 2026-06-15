@@ -1,0 +1,25 @@
+# IntelliJ project files
+.idea
+*.iml
+.sfdx
+.sf
+.run
+
+scripts/
+config/
+IlluminatedCloud/
+
+# Added by Illuminated Cloud
+.localdev/
+/out/
+target/
+node_modules/
+e2e/.artifacts/
+htmlReport/
+coverage/
+coverage-badge/
+**/tmp/
+/.illuminatedCloud/
+**/tsconfig*.json
+**/*.tsbuildinfo
+**/graphql.config.yml

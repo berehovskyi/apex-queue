@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AvailableAt__c</fullName>
+    <description>Earliest time the batch worker may claim this job.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Jobs scheduled for the future stay delayed until this time.</inlineHelpText>
+    <label>Available At</label>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>DateTime</type>
+</CustomField>

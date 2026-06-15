@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ExternalId__c</fullName>
+    <caseSensitive>false</caseSensitive>
+    <description>Internal queue-scoped scheduler identifier composed from QueueName__c and the public scheduler id.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Internal queue-scoped scheduler identifier.</inlineHelpText>
+    <label>External Id</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>

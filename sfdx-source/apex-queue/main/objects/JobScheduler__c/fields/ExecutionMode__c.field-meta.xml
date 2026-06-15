@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ExecutionMode__c</fullName>
+    <defaultValue>&quot;WORKER&quot;</defaultValue>
+    <description>Execution lane used by jobs materialized from this scheduler.</description>
+    <inlineHelpText>WORKER is the default. Queueable modes dispatch through QueueableDispatch__c. INVOCABLE uses Flow Scheduled Path handoff.</inlineHelpText>
+    <label>Execution Mode</label>
+    <required>true</required>
+    <trackHistory>true</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>true</sorted>
+            <value>
+                <fullName>INVOCABLE</fullName>
+                <default>false</default>
+                <label>Invocable</label>
+            </value>
+            <value>
+                <fullName>QUEUEABLE_CONCURRENT</fullName>
+                <default>false</default>
+                <label>Queueable Concurrent</label>
+            </value>
+            <value>
+                <fullName>QUEUEABLE_SERIAL</fullName>
+                <default>false</default>
+                <label>Queueable Serial</label>
+            </value>
+            <value>
+                <fullName>WORKER</fullName>
+                <default>true</default>
+                <label>Worker</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

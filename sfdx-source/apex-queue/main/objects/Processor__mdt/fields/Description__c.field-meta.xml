@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Description__c</fullName>
+    <description>Optional description of the processor behavior and expected work.</description>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Describe what this processor does, expected data, and important operational notes.</inlineHelpText>
+    <label>Description</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>

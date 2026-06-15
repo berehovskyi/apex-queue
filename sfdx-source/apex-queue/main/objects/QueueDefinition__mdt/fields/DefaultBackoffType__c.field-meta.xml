@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DefaultBackoffType__c</fullName>
+    <description>Default retry backoff strategy for jobs that do not provide one explicitly.</description>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Choose how retry delay is calculated when a job is retried.</inlineHelpText>
+    <label>Default Backoff Type</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>true</sorted>
+            <value>
+                <fullName>EXPONENTIAL</fullName>
+                <default>false</default>
+                <label>Exponential</label>
+            </value>
+            <value>
+                <fullName>FIXED</fullName>
+                <default>false</default>
+                <label>Fixed</label>
+            </value>
+            <value>
+                <fullName>NONE</fullName>
+                <default>true</default>
+                <label>None</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

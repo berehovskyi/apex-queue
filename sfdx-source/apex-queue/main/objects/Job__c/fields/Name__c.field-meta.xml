@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Name__c</fullName>
+    <caseSensitive>false</caseSensitive>
+    <description>Logical job name resolved within a queue.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Job name used for processor resolution and admin visibility.</inlineHelpText>
+    <label>Name</label>
+    <length>120</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

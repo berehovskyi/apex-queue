@@ -1,0 +1,52 @@
+name: 'Publish Coverage'
+
+on:
+  workflow_run:
+    workflows:
+      - Validate Pull Request
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: publish-coverage
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Coverage Badge
+        uses: actions/download-artifact@v8
+        with:
+          name: coverage-badge
+          path: coverage-badge
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Publish Coverage Badge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git init coverage-branch
+          cd coverage-branch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan coverage
+          cp ../coverage-badge/coverage.json coverage.json
+          git add coverage.json
+          git commit -m "Update coverage for ${HEAD_SHA}"
+          git push --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:coverage

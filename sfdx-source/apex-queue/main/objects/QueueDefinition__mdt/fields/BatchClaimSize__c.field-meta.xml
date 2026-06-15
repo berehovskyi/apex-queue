@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BatchClaimSize__c</fullName>
+    <description>Maximum number of due jobs batch.start() may claim for this queue before any execute scopes begin.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Caps start-time claiming so the worker setup transaction stays within DML row limits.</inlineHelpText>
+    <label>Batch Claim Size</label>
+    <precision>3</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

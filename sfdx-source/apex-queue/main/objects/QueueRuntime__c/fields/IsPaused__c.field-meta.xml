@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>IsPaused__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Stops the worker loop from claiming new jobs for this queue while in-flight work finishes.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Queue-level pause flag.</inlineHelpText>
+    <label>Is Paused</label>
+    <trackHistory>true</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

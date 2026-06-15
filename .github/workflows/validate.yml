@@ -1,0 +1,196 @@
+name: 'Validate Pull Request'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - unlabeled
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+
+      - name: Install Global Dependencies
+        run: npm i -g @salesforce/cli
+
+      - name: Install Code Analyzer plugin
+        run: sf plugins install code-analyzer
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Get Diff
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OUT=".diff_files.txt"
+          TMP=".diff_files_raw.txt"
+          : > "$OUT"
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            git fetch --no-tags --prune --depth=1 origin "$BASE_SHA" "$HEAD_SHA"
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" > "$TMP"
+          else
+            AFTER_REF="${{ github.sha }}"
+            git fetch --no-tags --prune --depth=1 origin "$AFTER_REF" || true
+            BEFORE_RAW="${{ github.event.before }}"
+            BEFORE_REF="$(git rev-parse --verify "$BEFORE_RAW^{commit}" 2>/dev/null || git hash-object -t tree /dev/null)"
+            git diff --name-only --diff-filter=ACMR "$BEFORE_REF" "$AFTER_REF" > "$TMP"
+          fi
+
+          # Keep only files that exist in workspace (skip deletes/odd renames)
+          while IFS= read -r f; do
+            [[ -f "$f" ]] && echo "$f" >> "$OUT"
+          done < "$TMP"
+          rm -f "$TMP"
+
+          COUNT="$(wc -l < "$OUT" | tr -d ' ')"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+
+          echo "Changed files ($COUNT):"
+          sed 's/^/ - /' "$OUT" || true
+
+      - name: Prettier Check
+        if: steps.diff.outputs.count != '0'
+        shell: bash
+        run: |
+          mapfile -t files < "${{ steps.diff.outputs.path }}"
+
+          echo "Prettier checking ${#files[@]} file(s):"
+
+          npx prettier --list-different  --ignore-unknown -- "${files[@]}"
+
+      - name: Analyze Code
+        if: steps.diff.outputs.count != '0'
+        shell: bash
+        run: |
+          mapfile -t files < "${{ steps.diff.outputs.path }}"
+
+          args=()
+          for f in "${files[@]}"; do
+            if [[ "$f" == *sfdx-source* ]]; then
+              args+=(--target "$f")
+            fi
+          done
+
+          if [[ ${#args[@]} -eq 0 ]]; then
+            echo "No changed files under sfdx-source to analyze."
+            exit 0
+          fi
+
+          sf code-analyzer run \
+            --config-file ./code-analyzer.yml \
+            --severity-threshold 5 \
+            --workspace . \
+            "${args[@]}"
+
+      - name: Create Auth File
+        run: echo ${{ secrets.SF_DEV_HUB_AUTH_URL }} > authFile
+
+      - name: Authorize DevHub
+        run: sf org login sfdx-url -f authFile -d
+
+      - name: Create Scratch Org
+        id: create_scratch_org
+        run: sf org create scratch -e developer -d -a TestOrg -y 1 -w 30
+
+      - name: Deploy Metadata
+        run: sf project deploy start -o TestOrg -w 10
+
+      - name: Run Apex Tests
+        run: >
+          sf apex run test
+          -o TestOrg
+          -l RunLocalTests
+          -w 10
+          --code-coverage
+          --result-format json
+          --output-dir coverage
+
+      - name: Create Coverage Badge
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          const report = JSON.parse(fs.readFileSync('coverage/test-result-codecoverage.json', 'utf8'));
+          const totalLines = report.reduce((sum, entry) => sum + entry.totalLines, 0);
+          const coveredLines = report.reduce((sum, entry) => sum + entry.totalCovered, 0);
+          const coverage = totalLines === 0 ? 0 : Math.round((coveredLines * 10000) / totalLines) / 100;
+          const message = Number.isInteger(coverage) ? `${coverage}%` : `${coverage.toFixed(2)}%`;
+          const color = coverage >= 90 ? 'brightgreen' : coverage >= 80 ? 'yellowgreen' : coverage >= 75 ? 'yellow' : 'red';
+
+          fs.mkdirSync('coverage-badge', { recursive: true });
+          fs.writeFileSync(
+            'coverage-badge/coverage.json',
+            JSON.stringify({ schemaVersion: 1, label: 'coverage', message, color }) + '\n'
+          );
+          NODE
+
+      - name: Upload Coverage Report
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: apex-coverage
+          path: coverage
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Coverage Badge
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-badge
+          path: coverage-badge/coverage.json
+          if-no-files-found: error
+
+      - name: Deploy E2E Metadata
+        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e') }}
+        run: sf project deploy start --source-dir e2e/main -o TestOrg -w 10
+
+      - name: Run E2E Tests
+        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e') }}
+        env:
+          SF_TARGET_ORG: TestOrg
+        run: bash e2e/run_all.sh
+
+      - name: Delete Scratch Org
+        if: ${{ always() && steps.create_scratch_org.outcome == 'success' }}
+        run: sf org delete scratch -o TestOrg -p
+
+      - name: Delete Auth File
+        if: always()
+        run: rm authFile

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Message__c</fullName>
+    <description>Failure message recorded for the queue-level error.</description>
+    <inlineHelpText>Failure message recorded for the queue-level error.</inlineHelpText>
+    <label>Message</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>

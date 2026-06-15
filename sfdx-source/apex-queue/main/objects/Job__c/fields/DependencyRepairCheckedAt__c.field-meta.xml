@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DependencyRepairCheckedAt__c</fullName>
+    <description>Timestamp when maintenance last checked whether this waiting parent could be released.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Used as a fair rotation cursor when maintenance repairs stale dependency graphs.</inlineHelpText>
+    <label>Dependency Repair Checked At</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

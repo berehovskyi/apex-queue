@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Failure reason captured when dispatcher handoff fails before all jobs are resolved.</description>
+    <fullName>FailedReason__c</fullName>
+    <inlineHelpText>Dispatcher failure message or exception summary.</inlineHelpText>
+    <label>Failed Reason</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>

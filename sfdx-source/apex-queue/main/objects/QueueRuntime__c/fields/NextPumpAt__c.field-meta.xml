@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NextPumpAt__c</fullName>
+    <description>Next intended wake time for the queue worker loop.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Used by runtime orchestration to know when this queue should wake again.</inlineHelpText>
+    <label>Next Pump At</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

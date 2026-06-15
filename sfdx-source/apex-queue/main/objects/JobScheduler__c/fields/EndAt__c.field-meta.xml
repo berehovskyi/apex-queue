@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EndAt__c</fullName>
+    <description>Optional inclusive end of the scheduler run window for every-minute schedulers.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Every-minute schedulers stop materializing jobs after this time.</inlineHelpText>
+    <label>End At</label>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <type>DateTime</type>
+</CustomField>

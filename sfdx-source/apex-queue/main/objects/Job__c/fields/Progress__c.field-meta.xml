@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Serialized progress information reported by the processor.</description>
+    <fullName>Progress__c</fullName>
+    <inlineHelpText>Progress payload or summary emitted during processing.</inlineHelpText>
+    <label>Progress</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

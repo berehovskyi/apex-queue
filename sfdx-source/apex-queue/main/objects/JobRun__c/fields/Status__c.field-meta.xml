@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Status__c</fullName>
+    <description>Outcome status recorded for the job attempt.</description>
+    <inlineHelpText>Run outcome such as completed, failed, paused, or deferred.</inlineHelpText>
+    <label>Status</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>true</sorted>
+            <value>
+                <fullName>ACTIVE</fullName>
+                <default>true</default>
+                <label>Active</label>
+            </value>
+            <value>
+                <fullName>COMPLETED</fullName>
+                <default>false</default>
+                <label>Completed</label>
+            </value>
+            <value>
+                <fullName>DEFERRED</fullName>
+                <default>false</default>
+                <label>Deferred</label>
+            </value>
+            <value>
+                <fullName>FAILED</fullName>
+                <default>false</default>
+                <label>Failed</label>
+            </value>
+            <value>
+                <fullName>PAUSED</fullName>
+                <default>false</default>
+                <label>Paused</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

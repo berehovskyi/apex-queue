@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BackoffType__c</fullName>
+    <description>Retry backoff strategy selected for this job.</description>
+    <inlineHelpText>Determines how the next retry time is calculated after a failed attempt.</inlineHelpText>
+    <label>Backoff Type</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>true</sorted>
+            <value>
+                <fullName>EXPONENTIAL</fullName>
+                <default>false</default>
+                <label>Exponential</label>
+            </value>
+            <value>
+                <fullName>FIXED</fullName>
+                <default>false</default>
+                <label>Fixed</label>
+            </value>
+            <value>
+                <fullName>NONE</fullName>
+                <default>true</default>
+                <label>None</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

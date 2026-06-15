@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PauseRequested__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Signals that a cooperative processor should stop at a safe boundary and defer remaining work.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Used only for cooperative pause checks so the processor can finish safely and resume later.</inlineHelpText>
+    <label>Pause Requested</label>
+    <trackHistory>true</trackHistory>
+    <type>Checkbox</type>
+</CustomField>

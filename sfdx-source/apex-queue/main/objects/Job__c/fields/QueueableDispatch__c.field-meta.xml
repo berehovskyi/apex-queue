@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>QueueableDispatch__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Ephemeral dispatch envelope that submitted this job through queueable transport.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Only set for queueable-mode jobs created by a queueable enqueue or addBulk dispatch.</inlineHelpText>
+    <label>Queueable Dispatch</label>
+    <referenceTo>QueueableDispatch__c</referenceTo>
+    <relationshipLabel>Jobs</relationshipLabel>
+    <relationshipName>Jobs</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

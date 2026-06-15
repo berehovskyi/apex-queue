@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>QueueName__c</fullName>
+    <description>Queue name associated with the failure.</description>
+    <inlineHelpText>Queue name associated with the failure.</inlineHelpText>
+    <label>Queue Name</label>
+    <length>80</length>
+    <required>true</required>
+    <type>Text</type>
+</CustomField>
