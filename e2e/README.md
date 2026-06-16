@@ -40,6 +40,9 @@ scripts for real org-level smoke flows.
   Invocable transport scripts for `BulkJobOptions.invocable()` enqueue, Flow
   Scheduled Path handoff, reschedule-by-`AvailableAt__c`, stale wake guards,
   no-longer-due guards, and expired active lease recovery through maintenance.
+- `e2e/test/maintenance`
+  Maintenance scripts for mixed terminal-cleanup policies and repair of a lost
+  invocable wake from durable `Job__c` state.
 - `e2e/test/performance`
   Opt-in load scripts for worker and queueable transport. These are not wired
   into `run_all.sh`.
@@ -53,6 +56,7 @@ scripts for real org-level smoke flows.
 - Real queueable executor finalizer failure path
 - Real invocable Flow Scheduled Path execution path
 - Expired active INVOCABLE lease recovery through independent maintenance
+- Terminal cleanup by queue policy and lost-wake repair through maintenance
 - Real outbound processor callouts to the Open-Meteo forecast API
 - Durable completion state and `JobRun__c` assertions
 - Negative unsupported-city processor failure path without framework
@@ -314,6 +318,7 @@ bash e2e/run_worker.sh
 bash e2e/run_queueable.sh
 bash e2e/run_queueable_concurrent.sh
 bash e2e/run_invocable.sh
+bash e2e/run_maintenance.sh
 ```
 
 Performance scripts are intentionally opt-in and are not included in

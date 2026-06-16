@@ -1607,6 +1607,451 @@ private class QueuesMaintenanceServiceTest {
     }
 
     @IsTest
+    static void should_delete_expired_terminal_jobs_and_preserve_referential_integrity() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-delete';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            queueDefinition.CompletedRetentionDays__c = 0;
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            Job__c failedJob = QueuesTestSupport.job(queueName, 'failed', Queues.State.FAILED.name(), 'failed');
+            Job__c childJob = QueuesTestSupport.job(queueName, 'child', Queues.State.WAITING.name(), 'child');
+            jobRepository.insertJobs(new List<Job__c>{ completedJob, failedJob });
+            childJob.Parent__c = completedJob.Id;
+            jobRepository.insertJobs(new List<Job__c>{ childJob });
+            JobRun__c run = new JobRun__c(
+                Job__c = completedJob.Id,
+                AttemptNumber__c = 1,
+                Status__c = Queues.RunStatus.COMPLETED.name()
+            );
+            insert run;
+            QueueError__c error = new QueueError__c(
+                QueueName__c = queueName,
+                Component__c = 'test',
+                Message__c = 'linked error',
+                OccurredAt__c = System.now(),
+                Job__c = completedJob.Id
+            );
+            insert error;
+            QueuesMaintenanceService service = terminalCleanupService(queueDefinition, jobRepository);
+
+            // Act
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Assert.areEqual(1, result.total);
+            Assert.areEqual(1, result.getCount(queueName));
+            Assert.areEqual(0, [SELECT COUNT() FROM Job__c WHERE Id = :completedJob.Id]);
+            Assert.areEqual(0, [SELECT COUNT() FROM JobRun__c WHERE Id = :run.Id]);
+            Assert.areEqual(1, [SELECT COUNT() FROM Job__c WHERE Id = :failedJob.Id]);
+            Assert.areEqual(1, [SELECT COUNT() FROM Job__c WHERE Id = :childJob.Id]);
+            Assert.areEqual(null, [SELECT Parent__c FROM Job__c WHERE Id = :childJob.Id].Parent__c);
+            Assert.areEqual(null, [SELECT Job__c FROM QueueError__c WHERE Id = :error.Id].Job__c);
+        }
+    }
+
+    @IsTest
+    static void should_skip_terminal_cleanup_when_policy_keeps_jobs() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-keep';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'KEEP';
+            queueDefinition.CompletedRetentionDays__c = 0;
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            jobRepository.insertJobs(new List<Job__c>{ completedJob });
+            QueuesMaintenanceService service = terminalCleanupService(queueDefinition, jobRepository);
+
+            // Act
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Assert.areEqual(0, result.total);
+            Assert.areEqual(1, [SELECT COUNT() FROM Job__c WHERE Id = :completedJob.Id]);
+        }
+    }
+
+    @IsTest
+    static void should_skip_terminal_cleanup_states_with_blank_retention() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-blank';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            jobRepository.insertJobs(new List<Job__c>{ completedJob });
+            QueuesMaintenanceService service = terminalCleanupService(queueDefinition, jobRepository);
+
+            // Act
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Assert.areEqual(0, result.total);
+            Assert.areEqual(1, [SELECT COUNT() FROM Job__c WHERE Id = :completedJob.Id]);
+        }
+    }
+
+    @IsTest
+    static void should_keep_recent_terminal_jobs_when_retention_is_not_elapsed() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-retention';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            queueDefinition.CompletedRetentionDays__c = 1;
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            jobRepository.insertJobs(new List<Job__c>{ completedJob });
+            QueuesMaintenanceService service = terminalCleanupService(queueDefinition, jobRepository);
+
+            // Act
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Assert.areEqual(true, result.done);
+            Assert.areEqual(0, result.total);
+            Assert.areEqual(1, [SELECT COUNT() FROM Job__c WHERE Id = :completedJob.Id]);
+        }
+    }
+
+    @IsTest
+    static void should_stop_terminal_cleanup_when_query_headroom_is_exhausted() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            QueuesMaintenanceService service = new QueuesMaintenanceService();
+            exhaustMaintenanceQueryHeadroom();
+
+            // Act
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Assert.areEqual(false, result.done);
+            Assert.areEqual(0, result.total);
+        }
+    }
+
+    @IsTest
+    static void should_stop_terminal_cleanup_before_queue_when_headroom_disappears() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-headroom-before-queue';
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            jobRepository.insertJobs(new List<Job__c>{ completedJob });
+            QueuesMaintenanceService service = new QueuesMaintenanceService();
+
+            // Act
+            QueuesMaintenanceService.recoveryHeadroomOverrides = new List<Boolean>{ true, false };
+            Queues.MaintenanceResult result = null;
+            try {
+                result = service.runTerminalCleanupMaintenance();
+            } finally {
+                QueuesMaintenanceService.recoveryHeadroomOverrides = null;
+            }
+
+            // Assert
+            Assert.areEqual(false, result.done);
+            Assert.areEqual(0, result.total);
+            Assert.areEqual(1, [SELECT COUNT() FROM Job__c WHERE Id = :completedJob.Id]);
+        }
+    }
+
+    @IsTest
+    static void should_delete_failed_and_canceled_terminal_jobs() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-terminal-states';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            queueDefinition.FailedRetentionDays__c = 0;
+            queueDefinition.CanceledRetentionDays__c = 0;
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c failedJob = QueuesTestSupport.job(queueName, 'failed', Queues.State.FAILED.name(), 'failed');
+            Job__c canceledJob = QueuesTestSupport.job(queueName, 'canceled', Queues.State.CANCELED.name(), 'canceled');
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            jobRepository.insertJobs(new List<Job__c>{ failedJob, canceledJob, completedJob });
+            QueuesMaintenanceService service = terminalCleanupService(queueDefinition, jobRepository);
+
+            // Act
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Set<Id> deletedJobIds = new Set<Id>{ failedJob.Id, canceledJob.Id };
+            Assert.areEqual(true, result.done);
+            Assert.areEqual(2, result.total);
+            Assert.areEqual(2, result.getCount(queueName));
+            Assert.areEqual(0, [SELECT COUNT() FROM Job__c WHERE Id IN :deletedJobIds]);
+            Assert.areEqual(1, [SELECT COUNT() FROM Job__c WHERE Id = :completedJob.Id]);
+        }
+    }
+
+    @IsTest
+    static void should_resume_terminal_cleanup_after_dml_row_budget_is_exhausted() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-resume';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            queueDefinition.CompletedRetentionDays__c = 0;
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            jobRepository.insertJobs(new List<Job__c>{ completedJob });
+            QueuesMaintenanceService service = terminalCleanupService(queueDefinition, jobRepository);
+
+            // Act
+            QueuesMaintenanceService.terminalCleanupDmlRowBudgetOverride = 0;
+            Queues.MaintenanceResult blockedResult = service.runTerminalCleanupMaintenance();
+            QueuesMaintenanceService.terminalCleanupDmlRowBudgetOverride = null;
+            Queues.MaintenanceResult resumedResult = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Assert.areEqual(false, blockedResult.done);
+            Assert.areEqual(0, blockedResult.total);
+            Assert.areEqual(true, resumedResult.done);
+            Assert.areEqual(1, resumedResult.total);
+            Assert.areEqual(0, [SELECT COUNT() FROM Job__c WHERE Id = :completedJob.Id]);
+        }
+    }
+
+    @IsTest
+    static void should_continue_terminal_cleanup_across_multiple_batches_when_row_budget_is_one() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-partial';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            queueDefinition.CompletedRetentionDays__c = 0;
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c firstJob = QueuesTestSupport.job(queueName, 'completed-1', Queues.State.COMPLETED.name(), 'done-1');
+            Job__c secondJob = QueuesTestSupport.job(queueName, 'completed-2', Queues.State.COMPLETED.name(), 'done-2');
+            jobRepository.insertJobs(new List<Job__c>{ firstJob, secondJob });
+            QueuesMaintenanceService service = terminalCleanupService(queueDefinition, jobRepository);
+
+            // Act
+            QueuesMaintenanceService.terminalCleanupDmlRowBudgetOverride = 1;
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+            QueuesMaintenanceService.terminalCleanupDmlRowBudgetOverride = null;
+
+            // Assert
+            Set<Id> cleanupJobIds = new Set<Id>{ firstJob.Id, secondJob.Id };
+            Assert.areEqual(true, result.done);
+            Assert.areEqual(2, result.total);
+            Assert.areEqual(2, result.getCount(queueName));
+            Assert.areEqual(0, [SELECT COUNT() FROM Job__c WHERE Id IN :cleanupJobIds]);
+        }
+    }
+
+    @IsTest
+    static void should_mark_terminal_cleanup_incomplete_when_locked_jobs_are_no_longer_eligible() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String firstQueueName = 'terminal-cleanup-defensive-a';
+            String secondQueueName = 'terminal-cleanup-defensive-b';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(firstQueueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            queueDefinition.CompletedRetentionDays__c = 0;
+
+            QueuesJobRepository setupRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c firstAggregateJob = QueuesTestSupport.job(
+                firstQueueName,
+                'completed-a',
+                Queues.State.COMPLETED.name(),
+                'completed-a'
+            );
+            Job__c secondAggregateJob = QueuesTestSupport.job(
+                secondQueueName,
+                'completed-b',
+                Queues.State.COMPLETED.name(),
+                'completed-b'
+            );
+            Job__c waitingJob = QueuesTestSupport.job(
+                secondQueueName,
+                'waiting',
+                Queues.State.WAITING.name(),
+                'waiting'
+            );
+            setupRepository.insertJobs(new List<Job__c>{ firstAggregateJob, secondAggregateJob, waitingJob });
+
+            Set<String> queueNames = new Set<String>{ firstQueueName, secondQueueName };
+            List<AggregateResult> queueNameRows = [
+                SELECT QueueName__c queueName
+                FROM Job__c
+                WHERE QueueName__c IN :queueNames
+                GROUP BY QueueName__c
+            ];
+            Job__c noLastModifiedDateCandidate = QueuesTestSupport.job(
+                firstQueueName,
+                'completed-without-lmd',
+                Queues.State.COMPLETED.name(),
+                'completed-without-lmd'
+            );
+            Job__c nonTerminalCandidate = [
+                SELECT Id, QueueName__c, State__c, LastModifiedDate
+                FROM Job__c
+                WHERE Id = :waitingJob.Id
+            ];
+            QueuesTestSupport.RecordingStubProvider jobRepositoryProvider = new QueuesTestSupport.RecordingStubProvider()
+                .withReturn('queryTerminalCleanupMaintenanceQueueNames', queueNameRows)
+                .withReturns(
+                    'queryExpiredTerminalCleanupJobsForUpdate',
+                    new List<Object>{
+                        new List<Job__c>{ noLastModifiedDateCandidate },
+                        new List<Job__c>{ nonTerminalCandidate }
+                    }
+                );
+            QueuesMaintenanceService service = terminalCleanupService(
+                queueDefinition,
+                (QueuesJobRepository) Test.createStub(QueuesJobRepository.class, jobRepositoryProvider)
+            );
+
+            // Act
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Assert.areEqual(false, result.done);
+            Assert.areEqual(0, result.total);
+            Assert.areEqual(0, jobRepositoryProvider.getCallCount('deleteJobs'));
+        }
+    }
+
+    @IsTest
+    static void should_mark_terminal_cleanup_incomplete_when_headroom_exhausts_after_delete_batch() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-headroom-after-delete';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            queueDefinition.CompletedRetentionDays__c = 0;
+
+            QueuesJobRepository setupRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            setupRepository.insertJobs(new List<Job__c>{ completedJob });
+            List<AggregateResult> queueNameRows = [
+                SELECT QueueName__c queueName
+                FROM Job__c
+                WHERE QueueName__c = :queueName
+                GROUP BY QueueName__c
+            ];
+            Job__c lockedCompletedJob = [
+                SELECT Id, QueueName__c, State__c, LastModifiedDate
+                FROM Job__c
+                WHERE Id = :completedJob.Id
+            ];
+            QueuesTestSupport.RecordingStubProvider jobRepositoryProvider = new QueuesTestSupport.RecordingStubProvider()
+                .withReturn('queryTerminalCleanupMaintenanceQueueNames', queueNameRows)
+                .withReturn('queryExpiredTerminalCleanupJobsForUpdate', new List<Job__c>{ lockedCompletedJob })
+                .withReturn('deleteJobs', new List<Job__c>{ lockedCompletedJob });
+            QueuesMaintenanceService service = terminalCleanupService(
+                queueDefinition,
+                (QueuesJobRepository) Test.createStub(QueuesJobRepository.class, jobRepositoryProvider)
+            );
+
+            // Act
+            QueuesMaintenanceService.recoveryHeadroomOverrides = new List<Boolean>{ true, true, true, false };
+            Queues.MaintenanceResult result = null;
+            try {
+                result = service.runTerminalCleanupMaintenance();
+            } finally {
+                QueuesMaintenanceService.recoveryHeadroomOverrides = null;
+            }
+
+            // Assert
+            Assert.areEqual(false, result.done);
+            Assert.areEqual(1, result.total);
+            Assert.areEqual(1, result.getCount(queueName));
+            Assert.areEqual(1, jobRepositoryProvider.getCallCount('deleteJobs'));
+        }
+    }
+
+    @IsTest
+    static void should_record_queue_error_when_terminal_cleanup_configuration_is_invalid() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'terminal-cleanup-invalid';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            queueDefinition.TerminalCleanupPolicy__c = 'DELETE';
+            queueDefinition.CompletedRetentionDays__c = -1;
+            QueuesJobRepository jobRepository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            jobRepository.insertJobs(new List<Job__c>{ completedJob });
+            QueuesTestSupport.RecordingStubProvider eventRepositoryProvider = new QueuesTestSupport.RecordingStubProvider();
+            QueuesErrorEventRepository eventRepositoryStub = (QueuesErrorEventRepository) Test.createStub(
+                QueuesErrorEventRepository.class,
+                eventRepositoryProvider
+            );
+            QueuesMaintenanceService service = terminalCleanupService(
+                queueDefinition,
+                jobRepository,
+                new QueuesErrorService(new QueuesErrorRepository(), eventRepositoryStub)
+            );
+
+            // Act
+            Queues.MaintenanceResult result = service.runTerminalCleanupMaintenance();
+
+            // Assert
+            Assert.areEqual(false, result.done);
+            Assert.areEqual(0, result.total);
+            Assert.areEqual(1, [SELECT COUNT() FROM Job__c WHERE Id = :completedJob.Id]);
+            Assert.areEqual(1, eventRepositoryProvider.getCallCount('publishQueueError'));
+            QueueErrorEvent__e queueError = (QueueErrorEvent__e) eventRepositoryProvider.getLastArgs(
+                'publishQueueError'
+            )[0];
+            Assert.areEqual(queueName, queueError.QueueName__c);
+            Assert.areEqual('terminal cleanup', queueError.Component__c);
+            Assert.isTrue(queueError.Message__c.contains('CompletedRetentionDays__c must be zero or greater.'));
+        }
+    }
+
+    @IsTest
     static void should_parse_worker_queue_name_from_scheduled_job_name() {
         System.runAs(QueuesTestSupport.queueUser()) {
             // Act + Assert
@@ -1620,6 +2065,36 @@ private class QueuesMaintenanceServiceTest {
             );
             Assert.areEqual(null, QueuesMaintenanceService.resolveWorkerQueueName(''));
         }
+    }
+
+    private static QueuesMaintenanceService terminalCleanupService(
+        final QueueDefinition__mdt queueDefinition,
+        final QueuesJobRepository jobRepository
+    ) {
+        return terminalCleanupService(queueDefinition, jobRepository, new QueuesErrorService());
+    }
+
+    private static QueuesMaintenanceService terminalCleanupService(
+        final QueueDefinition__mdt queueDefinition,
+        final QueuesJobRepository jobRepository,
+        final QueuesErrorService errorService
+    ) {
+        QueuesDefinitionService definitionStub = (QueuesDefinitionService) Test.createStub(
+            QueuesDefinitionService.class,
+            new QueuesTestSupport.RecordingStubProvider().withReturn('findQueueDefinitionAsSystem', queueDefinition)
+        );
+        return new QueuesMaintenanceService(
+            new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
+            definitionStub,
+            errorService,
+            new QueuesQueueAdminService(),
+            emptyRuntimeRepositoryStub(),
+            jobRepository,
+            emptyScheduleRepositoryStub(),
+            new QueuesInvocableExecutionService(),
+            new QueuesQueueableDispatchRepository(),
+            new QueuesFlowProducerService()
+        );
     }
 
     private static Database.SaveResult successfulPublishResult() {

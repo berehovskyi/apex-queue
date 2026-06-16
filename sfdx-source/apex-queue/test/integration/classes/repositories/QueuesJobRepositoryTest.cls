@@ -910,6 +910,78 @@ private class QueuesJobRepositoryTest {
     }
 
     @IsTest
+    static void should_query_expired_terminal_cleanup_jobs() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'job-repo-terminal-cleanup';
+            Datetime currentNow = System.now();
+            QueuesJobRepository repository = new QueuesJobRepository(System.AccessLevel.SYSTEM_MODE);
+            Job__c completedJob = QueuesTestSupport.job(
+                queueName,
+                'completed',
+                Queues.State.COMPLETED.name(),
+                'completed'
+            );
+            Job__c failedJob = QueuesTestSupport.job(queueName, 'failed', Queues.State.FAILED.name(), 'failed');
+            Job__c canceledJob = QueuesTestSupport.job(queueName, 'canceled', Queues.State.CANCELED.name(), 'canceled');
+            Job__c waitingJob = QueuesTestSupport.job(queueName, 'waiting', Queues.State.WAITING.name(), 'waiting');
+            Job__c childJob = QueuesTestSupport.job(queueName, 'child', Queues.State.COMPLETED.name(), 'child');
+            repository.insertJobs(new List<Job__c>{ completedJob, failedJob, canceledJob, waitingJob });
+            childJob.Parent__c = completedJob.Id;
+            repository.insertJobs(new List<Job__c>{ childJob });
+
+            // Act
+            List<AggregateResult> queueNames = repository.queryTerminalCleanupMaintenanceQueueNames();
+            List<Job__c> completedOnly = repository.queryExpiredTerminalCleanupJobsForUpdate(
+                queueName,
+                currentNow.addMinutes(1),
+                null,
+                null,
+                10
+            );
+            List<Job__c> allTerminals = repository.queryExpiredTerminalCleanupJobsForUpdate(
+                queueName,
+                currentNow.addMinutes(1),
+                currentNow.addMinutes(1),
+                currentNow.addMinutes(1),
+                10
+            );
+            List<Job__c> newerThanCutoff = repository.queryExpiredTerminalCleanupJobsForUpdate(
+                queueName,
+                currentNow.addSeconds(-1),
+                null,
+                null,
+                10
+            );
+            List<Job__c> blankQueueName = repository.queryExpiredTerminalCleanupJobsForUpdate(
+                '',
+                currentNow.addMinutes(1),
+                null,
+                null,
+                10
+            );
+            List<Job__c> nonPositiveLimit = repository.queryExpiredTerminalCleanupJobsForUpdate(
+                queueName,
+                currentNow.addMinutes(1),
+                null,
+                null,
+                0
+            );
+
+            // Assert
+            Assert.areEqual(queueName, (String) queueNames[0].get('queueName'));
+            Assert.areEqual(new Set<Id>{ completedJob.Id, childJob.Id }, QueuesSupport.toIdSet(completedOnly));
+            Assert.areEqual(
+                new Set<Id>{ completedJob.Id, failedJob.Id, canceledJob.Id, childJob.Id },
+                QueuesSupport.toIdSet(allTerminals)
+            );
+            Assert.areEqual(0, newerThanCutoff.size());
+            Assert.areEqual(0, blankQueueName.size());
+            Assert.areEqual(0, nonPositiveLimit.size());
+        }
+    }
+
+    @IsTest
     static void should_return_empty_results_when_job_query_or_mutation_inputs_are_empty() {
         System.runAs(QueuesTestSupport.queueUser()) {
             // Arrange
@@ -1000,6 +1072,13 @@ private class QueuesJobRepositoryTest {
                 QueuesSupport.toStateValues(new Set<Queues.State>{ Queues.State.WAITING }),
                 1
             );
+            List<Job__c> emptyTerminalCleanupJobs = repository.queryExpiredTerminalCleanupJobsForUpdate(
+                'job-repo-empty',
+                null,
+                null,
+                null,
+                1
+            );
 
             // Assert
             Assert.areEqual(0, emptyDueJobs.size());
@@ -1027,6 +1106,7 @@ private class QueuesJobRepositoryTest {
             Assert.areEqual(0, emptyDrainableJobs.size());
             Assert.areEqual(0, emptyQueueableDispatchJobs.size());
             Assert.areEqual(0, emptyQueueableDispatchJobsById.size());
+            Assert.areEqual(0, emptyTerminalCleanupJobs.size());
         }
     }
 }

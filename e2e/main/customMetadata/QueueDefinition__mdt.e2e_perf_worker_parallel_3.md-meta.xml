@@ -30,4 +30,8 @@
         <field>QueueName__c</field>
         <value xsi:type="xsd:string">e2e-performance-worker-parallel-3</value>
     </values>
+    <values>
+        <field>TerminalCleanupPolicy__c</field>
+        <value xsi:type="xsd:string">KEEP</value>
+    </values>
 </CustomMetadata>

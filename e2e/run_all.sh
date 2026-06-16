@@ -22,6 +22,7 @@ bash "$SCRIPT_DIR/run_worker.sh"
 bash "$SCRIPT_DIR/run_queueable.sh"
 bash "$SCRIPT_DIR/run_queueable_concurrent.sh"
 bash "$SCRIPT_DIR/run_invocable.sh"
+bash "$SCRIPT_DIR/run_maintenance.sh"
 
 echo
 echo "All apex-queue e2e suites completed successfully."

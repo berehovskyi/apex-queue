@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CanceledRetentionDays__c</fullName>
+    <description>Duration days to keep canceled jobs in hot Job__c storage before terminal cleanup can delete them.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Blank keeps canceled jobs forever; 0 makes them eligible on the next cleanup cycle.</inlineHelpText>
+    <label>Canceled Retention Days</label>
+    <precision>4</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

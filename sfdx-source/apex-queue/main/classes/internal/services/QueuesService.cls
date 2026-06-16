@@ -188,6 +188,10 @@ public inherited sharing class QueuesService {
         return jobSchedulerService.runJobSchedulerMaintenanceAsSystem();
     }
 
+    public Queues.MaintenanceResult runTerminalCleanupMaintenance() {
+        return maintenanceService.runTerminalCleanupMaintenance();
+    }
+
     public Id scheduleMaintenance() {
         return maintenanceSchedule.schedule();
     }

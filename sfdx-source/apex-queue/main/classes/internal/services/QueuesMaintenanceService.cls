@@ -15,9 +15,14 @@ public inherited sharing class QueuesMaintenanceService {
     private static final Integer MAINTENANCE_DML_STATEMENT_HEADROOM = 10;
     private static final Integer MAINTENANCE_QUERY_HEADROOM = 25;
     private static final Integer MAINTENANCE_CPU_MS_HEADROOM = 2000;
+    private static final Integer TERMINAL_CLEANUP_JOB_BATCH_SIZE = 200;
+    private static final Integer TERMINAL_CLEANUP_DML_ROW_SLACK = 50;
+    private static final Integer SECONDS_PER_DAY = 24 * 60 * 60;
     private static final String ORPHANED_ASYNC_WORKER_QUEUE_NAME = '[orphaned async worker]';
     private static final String ORPHANED_SCHEDULED_WORKER_QUEUE_NAME = '[orphaned scheduled worker]';
     private static final String RUNTIME_MAINTENANCE_COMPONENT = 'runtime maintenance';
+    private static final String TERMINAL_CLEANUP_COMPONENT = 'terminal cleanup';
+    private static final String TERMINAL_CLEANUP_DELETE_POLICY = 'DELETE';
     private static final String WORKER_JOB_NAME_PREFIX = 'Queues:';
     private static final Set<Queues.State> QUEUEABLE_RECOVERY_JOB_STATES = new Set<Queues.State>{ Queues.State.ACTIVE };
     private static final Set<Queues.State> STALE_INITIATED_QUEUEABLE_RECOVERY_JOB_STATES = new Set<Queues.State>{
@@ -59,6 +64,10 @@ public inherited sharing class QueuesMaintenanceService {
     private QueuesQueueAdminService queueAdminService = new QueuesQueueAdminService();
     private QueuesRuntimeRepository runtimeRepository = new QueuesRuntimeRepository(System.AccessLevel.SYSTEM_MODE);
     private QueuesScheduleRepository scheduleRepository = new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE);
+    @TestVisible
+    private static Integer terminalCleanupDmlRowBudgetOverride;
+    @TestVisible
+    private static List<Boolean> recoveryHeadroomOverrides;
 
     public QueuesMaintenanceService() {
     }
@@ -157,9 +166,53 @@ public inherited sharing class QueuesMaintenanceService {
 
         return result;
     }
+
+    @SuppressWarnings('PMD.OperationWithLimitsInLoop')
+    public Queues.MaintenanceResult runTerminalCleanupMaintenance() {
+        Queues.MaintenanceResult result = new Queues.MaintenanceResult();
+        if (!hasHeadroomForRecovery()) {
+            result.markIncomplete();
+            return result;
+        }
+
+        List<String> queueNames = new List<String>(queryTerminalCleanupMaintenanceQueueNames());
+        queueNames.sort();
+        for (String queueName : queueNames) {
+            if (!hasHeadroomForRecovery()) {
+                result.markIncomplete();
+                break;
+            }
+
+            QueueDefinition__mdt queueDefinition = definitionService.findQueueDefinitionAsSystem(queueName);
+            if (!shouldDeleteTerminalJobs(queueDefinition)) {
+                continue;
+            }
+
+            Savepoint savepoint = Database.setSavepoint();
+            try {
+                TerminalCleanupCutoffs cutoffs = resolveTerminalCleanupCutoffs(queueDefinition, QueuesSupport.now());
+                TerminalCleanupResult cleanupResult = deleteExpiredTerminalJobs(queueName, cutoffs);
+                result.add(queueName, cleanupResult.deletedCount);
+                if (!cleanupResult.completed) {
+                    result.markIncomplete();
+                }
+            } catch (Exception ex) {
+                Database.rollback(savepoint);
+                errorService.recordQueueError(queueName, TERMINAL_CLEANUP_COMPONENT, ex);
+                result.markIncomplete();
+            }
+        }
+
+        return result;
+    }
     // </editor-fold>
 
     // <editor-fold desc="Helpers">
+    @TestVisible
+    private Set<String> queryTerminalCleanupMaintenanceQueueNames() {
+        return QueuesSupport.toStringSet(jobRepository.queryTerminalCleanupMaintenanceQueueNames(), 'queueName');
+    }
+
     @TestVisible
     private Set<String> queryRuntimeMaintenanceQueueNames() {
         Datetime currentNow = QueuesSupport.now();
@@ -427,7 +480,128 @@ public inherited sharing class QueuesMaintenanceService {
         }
     }
 
+    private TerminalCleanupResult deleteExpiredTerminalJobs(
+        final String queueName,
+        final TerminalCleanupCutoffs cutoffs
+    ) {
+        TerminalCleanupResult result = new TerminalCleanupResult();
+        if (cutoffs == null || !cutoffs.hasAnyCutoff()) {
+            return result;
+        }
+
+        while (hasHeadroomForRecovery()) {
+            Integer jobLimit = resolveTerminalCleanupJobLimit();
+            if (jobLimit <= 0) {
+                result.completed = false;
+                return result;
+            }
+
+            List<Job__c> candidates = jobRepository.queryExpiredTerminalCleanupJobsForUpdate(
+                queueName,
+                cutoffs.completedCutoff,
+                cutoffs.failedCutoff,
+                cutoffs.canceledCutoff,
+                jobLimit
+            );
+            if (candidates.isEmpty()) {
+                return result;
+            }
+
+            List<Job__c> jobsToDelete = filterEligibleTerminalCleanupJobs(candidates, cutoffs);
+            if (jobsToDelete.isEmpty()) {
+                result.completed = false;
+                return result;
+            }
+
+            jobRepository.deleteJobs(jobsToDelete);
+            result.deletedCount += jobsToDelete.size();
+        }
+
+        result.completed = false;
+        return result;
+    }
+
+    private static List<Job__c> filterEligibleTerminalCleanupJobs(
+        final List<Job__c> candidates,
+        final TerminalCleanupCutoffs cutoffs
+    ) {
+        List<Job__c> eligibleJobs = new List<Job__c>();
+        for (Job__c candidate : candidates ?? new List<Job__c>()) {
+            if (isTerminalCleanupEligible(candidate, cutoffs)) {
+                eligibleJobs.add(candidate);
+            }
+        }
+        return eligibleJobs;
+    }
+
+    private static Boolean shouldDeleteTerminalJobs(final QueueDefinition__mdt queueDefinition) {
+        return QueuesSupport.normalizeEnumValue(queueDefinition?.TerminalCleanupPolicy__c) ==
+            TERMINAL_CLEANUP_DELETE_POLICY;
+    }
+
+    private static TerminalCleanupCutoffs resolveTerminalCleanupCutoffs(
+        final QueueDefinition__mdt queueDefinition,
+        final Datetime currentNow
+    ) {
+        return new TerminalCleanupCutoffs(
+            resolveRetentionCutoff(queueDefinition?.CompletedRetentionDays__c, currentNow, 'CompletedRetentionDays__c'),
+            resolveRetentionCutoff(queueDefinition?.FailedRetentionDays__c, currentNow, 'FailedRetentionDays__c'),
+            resolveRetentionCutoff(queueDefinition?.CanceledRetentionDays__c, currentNow, 'CanceledRetentionDays__c')
+        );
+    }
+
+    private static Datetime resolveRetentionCutoff(
+        final Object retentionDaysValue,
+        final Datetime currentNow,
+        final String fieldName
+    ) {
+        Integer retentionDays = QueuesSupport.toInteger(retentionDaysValue, null);
+        if (retentionDays == null) {
+            return null;
+        }
+        QueuesSupport.isTrue(
+            retentionDays >= 0,
+            new Queues.ConfigurationException(fieldName + ' must be zero or greater.')
+        );
+        return currentNow.addSeconds(-retentionDays * SECONDS_PER_DAY);
+    }
+
+    private static Integer resolveTerminalCleanupJobLimit() {
+        return Math.min(TERMINAL_CLEANUP_JOB_BATCH_SIZE, Math.max(resolveTerminalCleanupDmlRowBudget(), 0));
+    }
+
+    private static Integer resolveTerminalCleanupDmlRowBudget() {
+        if (terminalCleanupDmlRowBudgetOverride != null) {
+            return terminalCleanupDmlRowBudgetOverride;
+        }
+        return QueuesSupport.currentGovernorHeadroom().dmlRows -
+            MAINTENANCE_DML_ROW_HEADROOM -
+            TERMINAL_CLEANUP_DML_ROW_SLACK;
+    }
+
+    private static Boolean isTerminalCleanupEligible(final Job__c job, final TerminalCleanupCutoffs cutoffs) {
+        if (cutoffs == null || job?.LastModifiedDate == null) {
+            return false;
+        }
+
+        Queues.State state = QueuesSupport.toState(job.State__c);
+        if (state == Queues.State.COMPLETED) {
+            return cutoffs.completedCutoff != null && job.LastModifiedDate <= cutoffs.completedCutoff;
+        }
+        if (state == Queues.State.FAILED) {
+            return cutoffs.failedCutoff != null && job.LastModifiedDate <= cutoffs.failedCutoff;
+        }
+        if (state == Queues.State.CANCELED) {
+            return cutoffs.canceledCutoff != null && job.LastModifiedDate <= cutoffs.canceledCutoff;
+        }
+        return false;
+    }
+
     private static Boolean hasHeadroomForRecovery() {
+        if (recoveryHeadroomOverrides != null && !recoveryHeadroomOverrides.isEmpty()) {
+            return recoveryHeadroomOverrides.remove(0);
+        }
+
         QueuesSupport.GovernorHeadroom headroom = QueuesSupport.currentGovernorHeadroom();
         return hasHeadroomForRecovery(headroom.dmlRows, headroom.dmlStatements, headroom.queries, headroom.cpuMs);
     }
@@ -463,5 +637,30 @@ public inherited sharing class QueuesMaintenanceService {
         DEPENDENCY,
         DEPENDENCY_CLEANUP,
         INVOCABLE
+    }
+
+    private class TerminalCleanupCutoffs {
+        private final Datetime completedCutoff;
+        private final Datetime failedCutoff;
+        private final Datetime canceledCutoff;
+
+        private TerminalCleanupCutoffs(
+            final Datetime completedCutoff,
+            final Datetime failedCutoff,
+            final Datetime canceledCutoff
+        ) {
+            this.completedCutoff = completedCutoff;
+            this.failedCutoff = failedCutoff;
+            this.canceledCutoff = canceledCutoff;
+        }
+
+        private Boolean hasAnyCutoff() {
+            return completedCutoff != null || failedCutoff != null || canceledCutoff != null;
+        }
+    }
+
+    private class TerminalCleanupResult {
+        private Integer deletedCount = 0;
+        private Boolean completed = true;
     }
 }
