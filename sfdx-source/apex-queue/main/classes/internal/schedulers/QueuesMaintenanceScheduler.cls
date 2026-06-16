@@ -18,7 +18,7 @@ public without sharing class QueuesMaintenanceScheduler implements Schedulable {
     }
 
     public void execute(final SchedulableContext ctx) {
-        System.enqueueJob(new QueuesJobSchedulerMaintenance());
+        System.enqueueJob(new QueuesMaintenanceWorker(new QueuesJobSchedulerMaintenance()));
         queueService.runRuntimeMaintenance();
     }
 }

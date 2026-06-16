@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TerminalCleanupPolicy__c</fullName>
+    <description>Policy applied by maintenance to terminal jobs after their hot-retention window expires.</description>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Choose whether terminal jobs are kept or deleted after retention expires.</inlineHelpText>
+    <label>Terminal Cleanup Policy</label>
+    <required>true</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>true</sorted>
+            <value>
+                <fullName>DELETE</fullName>
+                <default>false</default>
+                <label>Delete</label>
+            </value>
+            <value>
+                <fullName>KEEP</fullName>
+                <default>true</default>
+                <label>Keep</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

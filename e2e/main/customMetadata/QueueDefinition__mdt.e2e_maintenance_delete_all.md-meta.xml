@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <label>E2E Stress Queueable Concurrent</label>
+    <label>E2E Maintenance Delete All</label>
     <protected>false</protected>
     <values>
         <field>BatchClaimSize__c</field>
-        <value xsi:type="xsd:double">40</value>
+        <value xsi:type="xsd:double">10</value>
+    </values>
+    <values>
+        <field>CanceledRetentionDays__c</field>
+        <value xsi:type="xsd:double">0</value>
+    </values>
+    <values>
+        <field>CompletedRetentionDays__c</field>
+        <value xsi:type="xsd:double">0</value>
     </values>
     <values>
         <field>DefaultAttempts__c</field>
@@ -20,7 +28,15 @@
     </values>
     <values>
         <field>DefaultLeaseMinutes__c</field>
-        <value xsi:type="xsd:double">50</value>
+        <value xsi:type="xsd:double">5</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value xsi:type="xsd:string">E2E maintenance queue that deletes every terminal state immediately.</value>
+    </values>
+    <values>
+        <field>FailedRetentionDays__c</field>
+        <value xsi:type="xsd:double">0</value>
     </values>
     <values>
         <field>IsActive__c</field>
@@ -28,10 +44,10 @@
     </values>
     <values>
         <field>QueueName__c</field>
-        <value xsi:type="xsd:string">e2e-stress-queueable-concurrent</value>
+        <value xsi:type="xsd:string">e2e-maintenance-delete-all</value>
     </values>
     <values>
         <field>TerminalCleanupPolicy__c</field>
-        <value xsi:type="xsd:string">KEEP</value>
+        <value xsi:type="xsd:string">DELETE</value>
     </values>
 </CustomMetadata>

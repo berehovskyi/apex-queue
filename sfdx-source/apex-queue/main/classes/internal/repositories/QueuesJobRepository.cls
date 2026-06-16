@@ -272,6 +272,47 @@ public inherited sharing class QueuesJobRepository {
         );
     }
 
+    public List<AggregateResult> queryTerminalCleanupMaintenanceQueueNames() {
+        return Database.queryWithBinds(
+            'SELECT QueueName__c queueName ' +
+                'FROM Job__c ' +
+                'WHERE QueueName__c != NULL ' +
+                'AND State__c IN :terminalStates ' +
+                'GROUP BY QueueName__c',
+            new Map<String, Object>{ 'terminalStates' => terminalCleanupStates() },
+            accessLevel
+        );
+    }
+
+    public List<Job__c> queryExpiredTerminalCleanupJobsForUpdate(
+        final String queueName,
+        final Datetime completedCutoff,
+        final Datetime failedCutoff,
+        final Datetime canceledCutoff,
+        final Integer jobLimit
+    ) {
+        if (String.isBlank(queueName) || jobLimit == null || jobLimit <= 0) {
+            return new List<Job__c>();
+        }
+
+        String condition = terminalCleanupCondition(completedCutoff, failedCutoff, canceledCutoff);
+        if (String.isBlank(condition)) {
+            return new List<Job__c>();
+        }
+
+        return Database.queryWithBinds(
+            'SELECT Id, QueueName__c, State__c, LastModifiedDate ' +
+                'FROM Job__c ' +
+                'WHERE QueueName__c = :queueName ' +
+                'AND ' +
+                condition +
+                'LIMIT :jobLimit ' +
+                'FOR UPDATE',
+            terminalCleanupBinds(queueName, completedCutoff, failedCutoff, canceledCutoff, jobLimit),
+            accessLevel
+        );
+    }
+
     public Boolean hasJobsBySchedulerId(final Id schedulerId, final Set<String> stateValues) {
         if (schedulerId == null || stateValues == null || stateValues.isEmpty()) {
             return false;
@@ -926,6 +967,51 @@ public inherited sharing class QueuesJobRepository {
             binds.put('jobLimit', jobLimit);
         }
         return binds;
+    }
+
+    private static Set<String> terminalCleanupStates() {
+        return new Set<String>{
+            Queues.State.COMPLETED.name(),
+            Queues.State.FAILED.name(),
+            Queues.State.CANCELED.name()
+        };
+    }
+
+    private static String terminalCleanupCondition(
+        final Datetime completedCutoff,
+        final Datetime failedCutoff,
+        final Datetime canceledCutoff
+    ) {
+        List<String> conditions = new List<String>();
+        if (completedCutoff != null) {
+            conditions.add('(State__c = :completedState AND LastModifiedDate <= :completedCutoff)');
+        }
+        if (failedCutoff != null) {
+            conditions.add('(State__c = :failedState AND LastModifiedDate <= :failedCutoff)');
+        }
+        if (canceledCutoff != null) {
+            conditions.add('(State__c = :canceledState AND LastModifiedDate <= :canceledCutoff)');
+        }
+        return conditions.isEmpty() ? null : '(' + String.join(conditions, ' OR ') + ')';
+    }
+
+    private static Map<String, Object> terminalCleanupBinds(
+        final String queueName,
+        final Datetime completedCutoff,
+        final Datetime failedCutoff,
+        final Datetime canceledCutoff,
+        final Integer jobLimit
+    ) {
+        return new Map<String, Object>{
+            'queueName' => queueName,
+            'completedState' => Queues.State.COMPLETED.name(),
+            'failedState' => Queues.State.FAILED.name(),
+            'canceledState' => Queues.State.CANCELED.name(),
+            'completedCutoff' => completedCutoff,
+            'failedCutoff' => failedCutoff,
+            'canceledCutoff' => canceledCutoff,
+            'jobLimit' => jobLimit
+        };
     }
 
     private List<Job__c> queryExpiredActiveJobsByIdsForUpdateInOrder(

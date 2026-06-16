@@ -59,7 +59,8 @@ public class QueuesTestSupport {
             DefaultBackoffValue__c = 0,
             DefaultBackoffJitter__c = 0,
             DefaultLeaseMinutes__c = 5,
-            BatchClaimSize__c = 1
+            BatchClaimSize__c = 1,
+            TerminalCleanupPolicy__c = 'KEEP'
         );
     }
 

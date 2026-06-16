@@ -105,6 +105,19 @@ public inherited sharing class Queues {
     }
 
     /**
+     * Runs one bounded terminal-cleanup sweep in the current transaction. Queues whose
+     * `QueueDefinition__mdt.TerminalCleanupPolicy__c` is `DELETE` remove eligible terminal
+     * `Job__c` rows according to their per-state retention fields. `JobRun__c` rows are removed
+     * by master-detail cascade.
+     *
+     * @return result whose done is false when cleanup stopped early and must be continued in
+     * a later transaction
+     */
+    public static MaintenanceResult runTerminalCleanupMaintenance() {
+        return queueService.runTerminalCleanupMaintenance();
+    }
+
+    /**
      * Schedules the recurring maintenance job at the default hourly cadence (`0 0 * * * ?`).
      * Idempotent: returns the existing scheduled job id when maintenance is already scheduled.
      *
@@ -278,7 +291,7 @@ public inherited sharing class Queues {
     }
 
     /**
-     * Outcome of a maintenance sweep. `total` is the count of items recovered or repaired,
+     * Outcome of a maintenance sweep. `total` is the count of items processed,
      * `done` reports whether the sweep finished or stopped early to preserve governor headroom,
      * and `countsByQueueName` breaks the total down per queue.
      *
@@ -288,11 +301,11 @@ public inherited sharing class Queues {
      * Boolean finished = result.done;
      */
     public class MaintenanceResult {
-        /** Total number of items recovered or repaired across all queues. */
+        /** Total number of items processed across all queues. */
         public Integer total { get; private set; }
         /** `false` when the sweep stopped early for governor headroom and should be re-run. */
         public Boolean done { get; private set; }
-        /** Per-queue breakdown of recovered or repaired items, keyed by queue name. */
+        /** Per-queue breakdown of processed items, keyed by queue name. */
         public Map<String, Integer> countsByQueueName { get; private set; }
 
         /** Creates an empty result with `total` `0` and `done` `true`. */
@@ -303,7 +316,7 @@ public inherited sharing class Queues {
         }
 
         /**
-         * Adds recovered or repaired items for a queue, updating `total` and the per-queue count.
+         * Adds processed items for a queue, updating `total` and the per-queue count.
          *
          * @param queueName queue the items belong to; ignored when blank
          * @param count number of items to add; treated as 0 when null
@@ -329,10 +342,10 @@ public inherited sharing class Queues {
         }
 
         /**
-         * Returns the number of items recovered or repaired for a single queue.
+         * Returns the number of items processed for a single queue.
          *
          * @param queueName queue name to look up
-         * @return recovered or repaired count for queueName, or 0 when none
+         * @return processed count for queueName, or 0 when none
          */
         public Integer getCount(final String queueName) {
             return countsByQueueName.get(queueName) ?? 0;

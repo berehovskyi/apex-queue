@@ -30,4 +30,8 @@
         <field>QueueName__c</field>
         <value xsi:type="xsd:string">e2e-worker-probe</value>
     </values>
+    <values>
+        <field>TerminalCleanupPolicy__c</field>
+        <value xsi:type="xsd:string">KEEP</value>
+    </values>
 </CustomMetadata>

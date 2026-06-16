@@ -134,7 +134,8 @@ jobs:
           -l RunLocalTests
           -w 10
           --code-coverage
-          --result-format json
+          --result-format human
+          --concise
           --output-dir coverage
 
       - name: Create Coverage Badge

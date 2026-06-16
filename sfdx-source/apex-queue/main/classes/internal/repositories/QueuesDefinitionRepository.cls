@@ -7,6 +7,19 @@
  */
 @SuppressWarnings('PMD.ApexDoc')
 public inherited sharing class QueuesDefinitionRepository {
+    private static final String QUEUE_DEFINITION_FIELDS =
+        'QueueName__c, ' +
+        'IsActive__c, ' +
+        'DefaultAttempts__c, ' +
+        'DefaultBackoffType__c, ' +
+        'DefaultBackoffValue__c, ' +
+        'DefaultBackoffJitter__c, ' +
+        'DefaultLeaseMinutes__c, ' +
+        'BatchClaimSize__c, ' +
+        'TerminalCleanupPolicy__c, ' +
+        'CompletedRetentionDays__c, ' +
+        'FailedRetentionDays__c, ' +
+        'CanceledRetentionDays__c ';
     private final AccessLevel accessLevel;
 
     public QueuesDefinitionRepository() {
@@ -20,17 +33,7 @@ public inherited sharing class QueuesDefinitionRepository {
     // <editor-fold desc="Queries">
     public List<QueueDefinition__mdt> queryQueueDefinitions(final String queueName) {
         return Database.queryWithBinds(
-            'SELECT ' +
-                'QueueName__c, ' +
-                'IsActive__c, ' +
-                'DefaultAttempts__c, ' +
-                'DefaultBackoffType__c, ' +
-                'DefaultBackoffValue__c, ' +
-                'DefaultBackoffJitter__c, ' +
-                'DefaultLeaseMinutes__c, ' +
-                'BatchClaimSize__c ' +
-                'FROM QueueDefinition__mdt ' +
-                'WHERE QueueName__c = :queueName',
+            'SELECT ' + QUEUE_DEFINITION_FIELDS + 'FROM QueueDefinition__mdt ' + 'WHERE QueueName__c = :queueName',
             new Map<String, Object>{ 'queueName' => queueName },
             accessLevel
         );
@@ -42,17 +45,7 @@ public inherited sharing class QueuesDefinitionRepository {
         }
 
         return Database.queryWithBinds(
-            'SELECT ' +
-                'QueueName__c, ' +
-                'IsActive__c, ' +
-                'DefaultAttempts__c, ' +
-                'DefaultBackoffType__c, ' +
-                'DefaultBackoffValue__c, ' +
-                'DefaultBackoffJitter__c, ' +
-                'DefaultLeaseMinutes__c, ' +
-                'BatchClaimSize__c ' +
-                'FROM QueueDefinition__mdt ' +
-                'WHERE QueueName__c IN :queueNames',
+            'SELECT ' + QUEUE_DEFINITION_FIELDS + 'FROM QueueDefinition__mdt ' + 'WHERE QueueName__c IN :queueNames',
             new Map<String, Object>{ 'queueNames' => queueNames },
             accessLevel
         );

@@ -58,6 +58,7 @@ async artifacts as wake or handoff mechanisms instead of the source of truth.
         - [Dependency Policies](#dependency-policies)
     - [Maintenance](#maintenance)
         - [Recovery](#recovery)
+        - [Job Retention Policy](#job-retention-policy)
         - [Schedule Maintenance](#schedule-maintenance)
         - [Run Maintenance Manually](#run-maintenance-manually)
     - [Metrics](#metrics)
@@ -221,6 +222,10 @@ Create a `QueueDefinition__mdt` record for every queue name you want to use:
 | `DefaultBackoffJitter__c`                        | `0`     | Default retry jitter ratio from `0` to `1`.      |
 | `DefaultLeaseMinutes__c`                         | `5`     | Lease age before active work can be recovered.   |
 | `BatchClaimSize__c`                              | `1`     | Worker claim size for `WORKER` jobs.             |
+| `TerminalCleanupPolicy__c`                       | `KEEP`  | Terminal job cleanup policy: `KEEP` or `DELETE`. |
+| `CompletedRetentionDays__c`                      | -       | Days to keep `COMPLETED` jobs when deleting.     |
+| `FailedRetentionDays__c`                         | -       | Days to keep `FAILED` jobs when deleting.        |
+| `CanceledRetentionDays__c`                       | -       | Days to keep `CANCELED` jobs when deleting.      |
 
 #### Adding a Job
 
@@ -423,6 +428,11 @@ public class InvoiceSyncProcessor implements Queues.JobProcessor {
     }
 }
 ```
+
+> [!WARNING]
+> Avoid unmanaged native async chains in processors. Apex Queue can recover and
+> cancel framework-owned async work, but not native async work created directly
+> by processor code.
 
 `JobContext` exposes the durable job record id, queue name, processor name,
 idempotency key, attempts, data, checkpoint, and progress.
@@ -1021,6 +1031,35 @@ native async visibility. Recovery includes:
 - stale `WAITING_CHILDREN` dependency parents,
 - orphaned worker and scheduler native artifacts.
 
+#### Job Retention Policy
+
+Terminal jobs are kept by default. Set `TerminalCleanupPolicy__c` to `DELETE`
+on a `QueueDefinition__mdt` record when terminal jobs should be removed by
+maintenance.
+
+Use the per-state retention fields to control when each terminal state becomes
+eligible:
+
+| Field                       | Applies to  |
+| --------------------------- | ----------- |
+| `CompletedRetentionDays__c` | `COMPLETED` |
+| `FailedRetentionDays__c`    | `FAILED`    |
+| `CanceledRetentionDays__c`  | `CANCELED`  |
+
+Blank retention values omit that state from cleanup. `0` means eligible on the
+next cleanup cycle; `N` means eligible after `N * 24 * 60 * 60` seconds since
+the job was last modified. Editing a terminal job updates `LastModifiedDate`
+and extends its retention window.
+
+Cleanup deletes eligible `Job__c` records and their `JobRun__c` history.
+`QueueError__c` records are retained and lose their job link if the job is
+deleted.
+
+> [!NOTE]
+> Retention cleanup is maintenance-owned. It runs from scheduled maintenance or
+> from `Queues.runTerminalCleanupMaintenance()`, not at the moment a job
+> completes.
+
 #### Schedule Maintenance
 
 Schedule maintenance once per org when you want automatic recovery:
@@ -1058,22 +1097,25 @@ Most recovery is driven by the scheduled maintenance job. Queue-level
 for org-level maintenance.
 
 Until maintenance is scheduled, stalled-job recovery, queueable dispatch
-recovery, dependency repair, and scheduler maintenance do not run automatically.
+recovery, dependency repair, scheduler maintenance, and terminal cleanup do not
+run automatically.
 
 #### Run Maintenance Manually
 
-Run both maintenance phases manually when you need immediate org-level recovery
+Run maintenance manually when you need immediate org-level recovery or cleanup
 instead of waiting for the scheduled maintenance job:
 
 ```apex
 Queues.MaintenanceResult runtime = Queues.runRuntimeMaintenance();
 Queues.MaintenanceResult schedulers = Queues.runJobSchedulerMaintenance();
+Queues.MaintenanceResult cleanup = Queues.runTerminalCleanupMaintenance();
 ```
 
 Runtime maintenance recovers stalled jobs, async handoffs, dependencies, and
 worker runtime state. Job scheduler maintenance repairs native schedules for
-durable job schedulers. Run runtime maintenance first, matching the scheduled
-maintenance job.
+durable job schedulers. Terminal cleanup removes eligible terminal jobs and
+their job runs according to queue metadata. Run runtime maintenance first, then
+scheduler maintenance, then cleanup, matching the scheduled maintenance chain.
 
 > [!WARNING]
 > Manual maintenance performs framework-owned system-mode recovery. Restrict
@@ -1084,7 +1126,7 @@ Each result exposes `total`, `done`, and per-queue counts through
 to preserve governor-limit headroom; run it again to continue.
 
 > [!TIP]
-> For immediate repair, run runtime maintenance first and repeat either phase
+> For immediate repair, run runtime maintenance first and repeat any phase
 > while its result has `done == false`.
 
 ### Metrics
@@ -1213,6 +1255,7 @@ observability:
 | `queue.cancel()`             | Cancels drainable jobs.                                |
 | `removeJobScheduler(...)`    | Deletes scheduler and linked jobs.                     |
 | `cancelJobScheduler(...)`    | Deactivates scheduler and cancels pending linked jobs. |
+| Terminal cleanup             | Deletes expired terminal jobs by queue policy.         |
 
 ### Security Model
 

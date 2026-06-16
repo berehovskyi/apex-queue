@@ -39,6 +39,8 @@ private class QueuesTest {
             .add(QueuesTestSupport.DEFAULT_QUEUE_NAME, 2);
         Queues.MaintenanceResult jobSchedulerMaintenanceResult = new Queues.MaintenanceResult()
             .add(QueuesTestSupport.DEFAULT_QUEUE_NAME, 1);
+        Queues.MaintenanceResult terminalCleanupMaintenanceResult = new Queues.MaintenanceResult()
+            .add(QueuesTestSupport.DEFAULT_QUEUE_NAME, 3);
         Queues.WorkerStatus workerStatus = new Queues.WorkerStatus(
             QueuesTestSupport.DEFAULT_QUEUE_NAME,
             QueuesTestSupport.fakeId(AsyncApexJob.SObjectType, 115),
@@ -65,7 +67,8 @@ private class QueuesTest {
             .withReturn('getJobSchedulers', new List<Queues.JobScheduler>{ schedulerValue })
             .withReturn('getJobSchedulersCount', 1)
             .withReturn('runRuntimeMaintenance', runtimeMaintenanceResult)
-            .withReturn('runJobSchedulerMaintenance', jobSchedulerMaintenanceResult);
+            .withReturn('runJobSchedulerMaintenance', jobSchedulerMaintenanceResult)
+            .withReturn('runTerminalCleanupMaintenance', terminalCleanupMaintenanceResult);
         QueuesService serviceStub = (QueuesService) Test.createStub(QueuesService.class, provider);
 
         try {
@@ -163,6 +166,7 @@ private class QueuesTest {
             Boolean movedWorkerToEnd = queue.moveWorkerToEnd();
             Queues.MaintenanceResult runtimeMaintenance = Queues.runRuntimeMaintenance();
             Queues.MaintenanceResult jobSchedulerMaintenance = Queues.runJobSchedulerMaintenance();
+            Queues.MaintenanceResult terminalCleanupMaintenance = Queues.runTerminalCleanupMaintenance();
 
             // Assert
             Assert.areEqual(firstJobId, addedJob.getId());
@@ -213,11 +217,14 @@ private class QueuesTest {
             Assert.areEqual(2, runtimeMaintenance.getCount(QueuesTestSupport.DEFAULT_QUEUE_NAME));
             Assert.areEqual(1, jobSchedulerMaintenance.total);
             Assert.areEqual(1, jobSchedulerMaintenance.getCount(QueuesTestSupport.DEFAULT_QUEUE_NAME));
+            Assert.areEqual(3, terminalCleanupMaintenance.total);
+            Assert.areEqual(3, terminalCleanupMaintenance.getCount(QueuesTestSupport.DEFAULT_QUEUE_NAME));
             Assert.areEqual(2, provider.getCallCount('addFlow'));
             Assert.areEqual(2, provider.getCallCount('addFlowBulk'));
             Assert.areEqual(1, provider.getCallCount('getFlow'));
             Assert.areEqual(1, provider.getCallCount('runRuntimeMaintenance'));
             Assert.areEqual(1, provider.getCallCount('runJobSchedulerMaintenance'));
+            Assert.areEqual(1, provider.getCallCount('runTerminalCleanupMaintenance'));
             Assert.areEqual(1, provider.getCallCount('getWorkerStatus'));
             Assert.areEqual(1, provider.getCallCount('moveWorkerToFront'));
             Assert.areEqual(1, provider.getCallCount('moveWorkerToEnd'));
