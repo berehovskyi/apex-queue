@@ -83,7 +83,7 @@ sf project deploy start -d sfdx-source/apex-queue -o <org-alias>
 or install as an Unlocked Package:
 
 ```sh pkg::apex-queue
-sf package install -p 04tJ5000000DA2oIAG -o <org-alias> -r -w 10
+sf package install -p 04tJ5000000DA2tIAG -o <org-alias> -r -w 10
 ```
 
 Assign one of the packaged permission sets to users who need framework access:
@@ -614,6 +614,10 @@ new Queues.JobOptions()
 ```
 
 Queue metadata supplies defaults when an option is not provided.
+
+`category(...)`, `groupKey(...)`, and `correlationId(...)` populate indexed
+`Job__c` fields for SOQL lookups. Use them for operational lookup dimensions;
+`Data__c` is payload, not a query model.
 
 #### Delayed Jobs
 

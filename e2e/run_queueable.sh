@@ -10,6 +10,8 @@ enter_repo_root
 echo "Running apex-queue queueable e2e suite from $REPO_ROOT"
 echo "Prerequisite: deploy e2e/main before running this script."
 
+assign_permission_set "RawPerformanceRunAccess" || echo "Could not assign RawPerformanceRunAccess; continuing."
+
 run_apex "$E2E_TEST_ROOT/queueable/00_cleanup.apex"
 run_apex "$E2E_TEST_ROOT/queueable/05_should_dedupe_queueable_dispatch_on_double_click.apex"
 run_apex "$E2E_TEST_ROOT/queueable/00_cleanup.apex"

@@ -377,6 +377,9 @@ private class QueuesTest {
         // Act
         Queues.JobOptions opts = new Queues.JobOptions()
             .jobId('job-132')
+            .category('checkout')
+            .groupKey('ORDER-132')
+            .correlationId('checkout-132')
             .attempts(3)
             .priority(4)
             .delay(1)
@@ -498,6 +501,9 @@ private class QueuesTest {
 
         // Assert
         Assert.areEqual(parentJobId, opts.getParentJobId());
+        Assert.areEqual('checkout', opts.getCategory());
+        Assert.areEqual('ORDER-132', opts.getGroupKey());
+        Assert.areEqual('checkout-132', opts.getCorrelationId());
         Assert.areEqual(Queues.Backoff.NONE, opts.getBackoffType());
         Assert.areEqual(0, opts.getBackoffValue());
         Assert.areEqual(0.0, opts.getBackoffJitter());

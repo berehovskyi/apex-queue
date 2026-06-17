@@ -152,6 +152,8 @@ echo "Running raw async performance e2e suite from $REPO_ROOT"
 echo "Prerequisite: deploy e2e/main before running this script."
 echo "This suite is opt-in and is intentionally not included in run_all.sh."
 
+assign_permission_set "RawPerformanceRunAccess" || echo "Could not assign RawPerformanceRunAccess; continuing."
+
 run_apex "$RAW_TEST_ROOT/00_cleanup.apex"
 run_raw_variant "BATCH_ITERATOR" "$RAW_TEST_ROOT/10_enqueue_batch_iterator.apex"
 run_raw_variant "BATCH_CURSOR" "$RAW_TEST_ROOT/20_enqueue_batch_cursor.apex"

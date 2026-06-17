@@ -577,6 +577,9 @@ private class QueuesJobServiceTest {
             new Map<String, Object>{ 'invoiceId' => 'INV-902' },
             new Queues.JobOptions()
                 .jobId('job-902')
+                .category('checkout')
+                .groupKey('ORDER-902')
+                .correlationId('checkout-902')
                 .availableAt(currentNow.addMinutes(6))
                 .attempts(7)
                 .priority(2)
@@ -629,6 +632,9 @@ private class QueuesJobServiceTest {
         Assert.areEqual(Queues.State.DELAYED, QueuesSupport.toState(delayedJob.State__c));
         Assert.areEqual(Queues.ExecutionMode.QUEUEABLE_SERIAL.name(), delayedJob.ExecutionMode__c);
         Assert.areEqual('job-902', delayedJob.ExternalId__c);
+        Assert.areEqual('checkout', delayedJob.Category__c);
+        Assert.areEqual('ORDER-902', delayedJob.GroupKey__c);
+        Assert.areEqual('checkout-902', delayedJob.CorrelationId__c);
         Assert.areEqual(
             QueuesSupport.buildQueueScopedExternalId(QueuesTestSupport.DEFAULT_QUEUE_NAME, 'job-902'),
             delayedJob.QueueScopedExternalId__c

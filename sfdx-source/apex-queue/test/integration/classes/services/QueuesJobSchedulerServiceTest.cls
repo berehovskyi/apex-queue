@@ -43,6 +43,9 @@ private class QueuesJobSchedulerServiceTest {
                         new Queues.JobOptions()
                             .priority(2)
                             .attempts(4)
+                            .category('billing')
+                            .groupKey('ORDER-EVERY')
+                            .correlationId('scheduler-correlation')
                             .backoff(Queues.Backoff.FIXED, 7)
                             .parent(parentJob.Id)
                     )
@@ -53,6 +56,9 @@ private class QueuesJobSchedulerServiceTest {
             Assert.areNotEqual(null, job.Id);
             Assert.areEqual(scheduler.Id, job.JobScheduler__c);
             Assert.areEqual(parentJob.Id, job.Parent__c);
+            Assert.areEqual('billing', job.Category__c);
+            Assert.areEqual('ORDER-EVERY', job.GroupKey__c);
+            Assert.areEqual('scheduler-correlation', job.CorrelationId__c);
             Assert.areEqual(Queues.Backoff.FIXED.name(), job.BackoffType__c);
             Assert.areEqual(7, QueuesSupport.toInteger(job.BackoffValue__c, 0));
             Assert.areEqual(Queues.State.DELAYED.name(), job.State__c);
@@ -1543,6 +1549,9 @@ private class QueuesJobSchedulerServiceTest {
                 new Map<String, Object>{
                     'attempts' => 5,
                     'priority' => 9,
+                    'category' => 'billing',
+                    'groupKey' => 'ORDER-READ',
+                    'correlationId' => 'scheduler-read-correlation',
                     'backoffType' => Queues.Backoff.EXPONENTIAL.name(),
                     'backoffValue' => 2,
                     'backoffJitter' => 0.25,
@@ -1580,6 +1589,9 @@ private class QueuesJobSchedulerServiceTest {
             Assert.areEqual(scheduler.NextRunAt__c, fetched.getNextRunAt());
             Assert.areEqual(5, fetched.getTemplate().getOpts().getAttempts());
             Assert.areEqual(9, fetched.getTemplate().getOpts().getPriority());
+            Assert.areEqual('billing', fetched.getTemplate().getOpts().getCategory());
+            Assert.areEqual('ORDER-READ', fetched.getTemplate().getOpts().getGroupKey());
+            Assert.areEqual('scheduler-read-correlation', fetched.getTemplate().getOpts().getCorrelationId());
             Assert.areEqual(Queues.Backoff.EXPONENTIAL, fetched.getTemplate().getOpts().getBackoffType());
             Assert.areEqual(2, fetched.getTemplate().getOpts().getBackoffValue());
             Assert.areEqual(0.25, fetched.getTemplate().getOpts().getBackoffJitter());
