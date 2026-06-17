@@ -1,5 +1,11 @@
 # Style Standards
 
+## General Code Shape
+
+- When two implementations are functionally equivalent and equally clear, prefer
+  the one that produces less code. Do not add indirection, helpers, or ceremony
+  unless it improves safety, readability, reuse, or testability.
+
 ## Apex Null Handling
 
 - Prefer `?.` and `??` over verbose ternaries or nested null checks.

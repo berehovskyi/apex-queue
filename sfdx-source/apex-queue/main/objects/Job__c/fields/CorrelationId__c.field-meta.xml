@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CorrelationId__c</fullName>
+    <caseSensitive>false</caseSensitive>
+    <description>Optional indexed correlation id for tracing work across systems or business processes.</description>
+    <externalId>true</externalId>
+    <inlineHelpText>Optional indexed correlation id for cross-system SOQL lookups.</inlineHelpText>
+    <label>Correlation Id</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

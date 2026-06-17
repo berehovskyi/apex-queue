@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Category__c</fullName>
+    <caseSensitive>false</caseSensitive>
+    <description>Optional indexed job category for business SOQL lookups.</description>
+    <externalId>true</externalId>
+    <inlineHelpText>Optional indexed job category for business SOQL lookups.</inlineHelpText>
+    <label>Category</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

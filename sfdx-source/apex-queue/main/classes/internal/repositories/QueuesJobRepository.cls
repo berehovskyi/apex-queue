@@ -15,6 +15,9 @@ public inherited sharing class QueuesJobRepository {
         'ExecutionMode__c, ' +
         'ExternalId__c, ' +
         'QueueScopedExternalId__c, ' +
+        'Category__c, ' +
+        'GroupKey__c, ' +
+        'CorrelationId__c, ' +
         'Priority__c, ' +
         'AvailableAt__c, ' +
         'AttemptsMade__c, ' +

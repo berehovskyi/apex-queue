@@ -764,8 +764,21 @@ public inherited sharing class QueuesJobSchedulerService {
         if (templateOpts.getPriority() != null) {
             opts.priority(templateOpts.getPriority());
         }
+        if (templateOpts.getCategory() != null) {
+            opts.category(templateOpts.getCategory());
+        }
+        if (templateOpts.getGroupKey() != null) {
+            opts.groupKey(templateOpts.getGroupKey());
+        }
+        if (templateOpts.getCorrelationId() != null) {
+            opts.correlationId(templateOpts.getCorrelationId());
+        }
         if (templateOpts.getBackoffType() != null) {
-            opts.backoff(templateOpts.getBackoffType(), templateOpts.getBackoffValue() ?? 0);
+            opts.backoff(
+                templateOpts.getBackoffType(),
+                templateOpts.getBackoffValue() ?? 0,
+                templateOpts.getBackoffJitter() ?? 0.0
+            );
         }
         if (templateOpts.getParentJobId() != null) {
             opts.parent(templateOpts.getParentJobId());
@@ -860,6 +873,15 @@ public inherited sharing class QueuesJobSchedulerService {
         if (opts.getPriority() != null) {
             valuesByName.put('priority', opts.getPriority());
         }
+        if (opts.getCategory() != null) {
+            valuesByName.put('category', opts.getCategory());
+        }
+        if (opts.getGroupKey() != null) {
+            valuesByName.put('groupKey', opts.getGroupKey());
+        }
+        if (opts.getCorrelationId() != null) {
+            valuesByName.put('correlationId', opts.getCorrelationId());
+        }
         if (opts.getBackoffType() != null) {
             valuesByName.put('backoffType', opts.getBackoffType().name());
             valuesByName.put('backoffValue', opts.getBackoffValue() ?? 0);
@@ -883,6 +905,15 @@ public inherited sharing class QueuesJobSchedulerService {
         }
         if (valuesByName.containsKey('priority')) {
             opts.priority(QueuesSupport.toInteger(valuesByName.get('priority'), null));
+        }
+        if (valuesByName.containsKey('category')) {
+            opts.category(valuesByName.get('category')?.toString());
+        }
+        if (valuesByName.containsKey('groupKey')) {
+            opts.groupKey(valuesByName.get('groupKey')?.toString());
+        }
+        if (valuesByName.containsKey('correlationId')) {
+            opts.correlationId(valuesByName.get('correlationId')?.toString());
         }
         if (valuesByName.containsKey('backoffType')) {
             opts.backoff(

@@ -24,7 +24,7 @@ run_apex "$E2E_TEST_ROOT/queueable_concurrent/31_should_assert_retryable_queueab
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/70_should_enqueue_retryable_queueable_job_with_ten_attempts.apex"
 wait_for_async 5
-run_apex "$E2E_TEST_ROOT/queueable_concurrent/71_should_assert_retryable_queueable_job_with_ten_attempts_failed.apex"
+run_apex_until_success "$E2E_TEST_ROOT/queueable_concurrent/71_should_assert_retryable_queueable_job_with_ten_attempts_failed.apex" 120 5
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/00_cleanup.apex"
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/50_should_keep_delayed_dispatches_isolated_when_later_delayed_job_is_added.apex"

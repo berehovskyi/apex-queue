@@ -1971,6 +1971,9 @@ public inherited sharing class Queues {
      */
     public class JobOptions {
         private String jobId;
+        private String category;
+        private String groupKey;
+        private String correlationId;
         private Integer attempts;
         private Integer priority;
         private Integer delay;
@@ -1993,6 +1996,42 @@ public inherited sharing class Queues {
         public JobOptions jobId(final String jobId) {
             QueuesService.requireValidJobId(jobId);
             this.jobId = jobId;
+            return this;
+        }
+
+        /**
+         * Sets an optional SOQL-friendly job category.
+         *
+         * @param category category value, 80 characters or fewer
+         * @return this options object for fluent chaining
+         * @throws QueueException when category is blank or too long
+         */
+        public JobOptions category(final String category) {
+            this.category = requireDimension(category, 'category', 80);
+            return this;
+        }
+
+        /**
+         * Sets an optional indexed business grouping key, such as an order or customer id.
+         *
+         * @param groupKey grouping key, 255 characters or fewer
+         * @return this options object for fluent chaining
+         * @throws QueueException when groupKey is blank or too long
+         */
+        public JobOptions groupKey(final String groupKey) {
+            this.groupKey = requireDimension(groupKey, 'groupKey', 255);
+            return this;
+        }
+
+        /**
+         * Sets an optional indexed correlation id for cross-system tracing.
+         *
+         * @param correlationId correlation id, 255 characters or fewer
+         * @return this options object for fluent chaining
+         * @throws QueueException when correlationId is blank or too long
+         */
+        public JobOptions correlationId(final String correlationId) {
+            this.correlationId = requireDimension(correlationId, 'correlationId', 255);
             return this;
         }
 
@@ -2186,6 +2225,27 @@ public inherited sharing class Queues {
         }
 
         /**
+         * @return configured job category, or null when unset
+         */
+        public String getCategory() {
+            return category;
+        }
+
+        /**
+         * @return configured grouping key, or null when unset
+         */
+        public String getGroupKey() {
+            return groupKey;
+        }
+
+        /**
+         * @return configured correlation id, or null when unset
+         */
+        public String getCorrelationId() {
+            return correlationId;
+        }
+
+        /**
          * @return configured attempt count, or null when unset
          */
         public Integer getAttempts() {
@@ -2253,6 +2313,15 @@ public inherited sharing class Queues {
          */
         public DependencyCanceledPolicy getDependencyCanceledPolicy() {
             return dependencyCanceledPolicy;
+        }
+
+        private String requireDimension(final String value, final String argName, final Integer maxLength) {
+            QueuesSupport.notBlank(value, argName);
+            QueuesSupport.isTrue(
+                value.length() <= maxLength,
+                new QueueException(argName + ' must be ' + maxLength + ' characters or fewer')
+            );
+            return value;
         }
     }
 
