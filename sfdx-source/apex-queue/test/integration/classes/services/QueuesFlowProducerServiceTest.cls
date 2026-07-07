@@ -1235,7 +1235,8 @@ private class QueuesFlowProducerServiceTest {
             processorService,
             queueableDispatchService,
             new QueuesRuntimeService(),
-            workerService
+            workerService,
+            new QueuesQueueEventService()
         );
     }
 

@@ -12,6 +12,15 @@ public inherited sharing class QueuesService {
     private static final String WORKER_SCHEDULING_COMPONENT = 'worker scheduling';
     private static final String QUEUEABLE_DISPATCH_COMPONENT = 'queueable dispatch';
     private static final String INVOCABLE_ENQUEUE_COMPONENT = 'invocable enqueue';
+    private static final String DUPLICATE_QUEUE_JOB_RESOLUTION_MESSAGE = 'Failed to resolve duplicate queue job "{0}" after enqueue race.';
+    private static final String DUPLICATE_INSERT_IDEMPOTENT_JOB_MESSAGE = 'Duplicate insert detection expects an idempotent job with ExternalId__c.';
+    private static final String DUPLICATE_INSERT_SAVE_RESULT_MESSAGE = 'Duplicate insert detection expects a failed save result.';
+    private static final String EXISTING_QUEUE_JOB_EXECUTION_MODE_MESSAGE = 'Existing queue job execution mode does not match bulk execution mode.';
+    private static final String INSERT_DML_ERRORS_MISSING_MESSAGE = 'Failed queue job insert did not expose any DML errors.';
+    private static final String INSERT_ERROR_MESSAGE_MISSING_MESSAGE = 'Failed queue job insert did not expose an error message.';
+    private static final String INSERT_FAILURE_SAVE_RESULT_MESSAGE = 'Queue insert failure expected a failed save result.';
+    private static final String INSERT_RESULTS_MISMATCH_MESSAGE = 'Queue insert results did not match the requested job count.';
+    private static final String INVALID_JOB_ID_LENGTH_MESSAGE = 'jobId must be {0} characters or fewer';
 
     private QueuesDefinitionService definitionService = new QueuesDefinitionService();
     private QueuesErrorService errorService = new QueuesErrorService();
@@ -66,7 +75,9 @@ public inherited sharing class QueuesService {
         QueuesSupport.notBlank(jobId, 'jobId');
         QueuesSupport.isTrue(
             jobId.length() <= MAX_JOB_ID_LENGTH,
-            new Queues.QueueException('jobId must be ' + MAX_JOB_ID_LENGTH + ' characters or fewer')
+            new Queues.QueueException(
+                String.format(INVALID_JOB_ID_LENGTH_MESSAGE, new List<Integer>{ MAX_JOB_ID_LENGTH })
+            )
         );
     }
     // </editor-fold>
@@ -461,7 +472,7 @@ public inherited sharing class QueuesService {
     ) {
         QueuesSupport.isTrue(
             QueuesSupport.toExecutionMode(existingJob.ExecutionMode__c) == executionMode,
-            new Queues.QueueException('Existing queue job execution mode does not match bulk execution mode.')
+            new Queues.QueueException(EXISTING_QUEUE_JOB_EXECUTION_MODE_MESSAGE)
         );
     }
 
@@ -474,7 +485,7 @@ public inherited sharing class QueuesService {
     ) {
         QueuesSupport.isTrue(
             saveResults != null && saveResults.size() == jobsToInsert.size(),
-            'Queue insert results did not match the requested job count.'
+            INSERT_RESULTS_MISMATCH_MESSAGE
         );
 
         ReconcileResult reconcileResult = new ReconcileResult();
@@ -514,7 +525,7 @@ public inherited sharing class QueuesService {
             );
             QueuesSupport.isTrue(
                 duplicateJob != null,
-                'Failed to resolve duplicate queue job "' + enqueuedJob.ExternalId__c + '" after enqueue race.'
+                String.format(DUPLICATE_QUEUE_JOB_RESOLUTION_MESSAGE, new List<String>{ enqueuedJob.ExternalId__c })
             );
             requireMatchingExecutionMode(duplicateJob, executionMode);
             enqueuedJobs[index] = duplicateJob;
@@ -523,37 +534,25 @@ public inherited sharing class QueuesService {
     }
 
     private static Exception buildInsertFailure(final Database.SaveResult saveResult) {
-        QueuesSupport.isTrue(
-            saveResult != null && !saveResult.isSuccess(),
-            'Queue insert failure expected a failed save result.'
-        );
+        QueuesSupport.isTrue(saveResult != null && !saveResult.isSuccess(), INSERT_FAILURE_SAVE_RESULT_MESSAGE);
 
         List<Database.Error> errors = saveResult.getErrors();
-        QueuesSupport.isTrue(
-            errors != null && !errors.isEmpty(),
-            'Failed queue job insert did not expose any DML errors.'
-        );
+        QueuesSupport.isTrue(errors != null && !errors.isEmpty(), INSERT_DML_ERRORS_MISSING_MESSAGE);
 
         String message = errors[0].getMessage();
-        QueuesSupport.isTrue(String.isNotBlank(message), 'Failed queue job insert did not expose an error message.');
+        QueuesSupport.isTrue(String.isNotBlank(message), INSERT_ERROR_MESSAGE_MISSING_MESSAGE);
         return new Queues.QueueException(message);
     }
 
     private static Boolean isDuplicateJobInsert(final Job__c job, final Database.SaveResult saveResult) {
         QueuesSupport.isTrue(
             job != null && String.isNotBlank(job.ExternalId__c),
-            'Duplicate insert detection expects an idempotent job with ExternalId__c.'
+            DUPLICATE_INSERT_IDEMPOTENT_JOB_MESSAGE
         );
-        QueuesSupport.isTrue(
-            saveResult != null && !saveResult.isSuccess(),
-            'Duplicate insert detection expects a failed save result.'
-        );
+        QueuesSupport.isTrue(saveResult != null && !saveResult.isSuccess(), DUPLICATE_INSERT_SAVE_RESULT_MESSAGE);
 
         List<Database.Error> errors = saveResult.getErrors();
-        QueuesSupport.isTrue(
-            errors != null && !errors.isEmpty(),
-            'Failed queue job insert did not expose any DML errors.'
-        );
+        QueuesSupport.isTrue(errors != null && !errors.isEmpty(), INSERT_DML_ERRORS_MISSING_MESSAGE);
 
         for (Database.Error error : errors) {
             if (!isDuplicateInsertStatusCode(error.getStatusCode())) {

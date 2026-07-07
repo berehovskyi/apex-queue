@@ -2733,6 +2733,61 @@ private class QueuesJobSchedulerServiceTest {
         }
     }
 
+    @IsTest
+    static void should_abandon_materialized_event_when_scheduler_materialization_rolls_back() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'scheduler-event-rollback-' + System.now().getTime();
+            Id currentScheduledJobId = QueuesTestSupport.fakeId(CronTrigger.SObjectType, 961);
+            Id nextScheduledJobId = QueuesTestSupport.fakeId(CronTrigger.SObjectType, 962);
+            JobScheduler__c scheduler = QueuesTestSupport.jobScheduler(queueName, 'event-rollback');
+            scheduler.ScheduledJobId__c = currentScheduledJobId;
+            insert scheduler;
+
+            QueuesTestSupport.RecordingStubProvider schedulerRepositoryProvider = new QueuesTestSupport.RecordingStubProvider()
+                .withReturn('queryJobSchedulersByIdForUpdate', new List<JobScheduler__c>{ scheduler })
+                .withReturn('queryJobSchedulersById', new List<JobScheduler__c>{ scheduler })
+                .withException('updateJobScheduler', new Queues.QueueException('scheduler update exploded'));
+            QueuesTestSupport.RecordingStubProvider scheduleProvider = new QueuesTestSupport.RecordingStubProvider()
+                .withReturn('scheduleEvery', nextScheduledJobId);
+            QueuesTestSupport.RecordingStubProvider scheduleRepositoryProvider = new QueuesTestSupport.RecordingStubProvider()
+                .withReturn('queryScheduledJobById', new List<CronTrigger>());
+            QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+            QueuesTestSupport.RecordingStubProvider errorEventProvider = new QueuesTestSupport.RecordingStubProvider();
+            QueuesJobSchedulerService service = newSchedulerService(
+                newDefinitionService(queueName, true),
+                newRecordingErrorService(errorEventProvider),
+                (QueuesJobSchedulerRepository) Test.createStub(
+                    QueuesJobSchedulerRepository.class,
+                    schedulerRepositoryProvider
+                ),
+                new QueuesJobService(),
+                newProcessorService(queueName),
+                new QueuesQueueableDispatchService(),
+                (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
+                (QueuesJobSchedulerSchedule) Test.createStub(QueuesJobSchedulerSchedule.class, scheduleProvider),
+                (QueuesWorkerService) Test.createStub(
+                    QueuesWorkerService.class,
+                    new QueuesTestSupport.RecordingStubProvider()
+                ),
+                QueuesTestSupport.newRecordingQueueEventService(queueName, 'SCHEDULER_MATERIALIZED', eventProvider)
+            );
+
+            // Act
+            try {
+                service.materializeJobSchedulerAndRecordError(scheduler.Id, String.valueOf(currentScheduledJobId));
+                Assert.fail('Expected scheduler materialization to fail.');
+            } catch (Queues.QueueException ex) {
+                Assert.areEqual('scheduler update exploded', ex.getMessage());
+            }
+
+            // Assert
+            Assert.areEqual(0, eventProvider.getCallCount('publishQueueEvents'));
+            Assert.areEqual(1, errorEventProvider.getCallCount('publishQueueError'));
+            Assert.areEqual(0, [SELECT COUNT() FROM Job__c WHERE JobScheduler__c = :scheduler.Id]);
+        }
+    }
+
     private static QueuesJobSchedulerService newSchedulerService(
         final String queueName,
         final QueuesJobSchedulerSchedule scheduleService,
@@ -2785,6 +2840,32 @@ private class QueuesJobSchedulerServiceTest {
         final QueuesJobSchedulerSchedule scheduleService,
         final QueuesWorkerService workerService
     ) {
+        return newSchedulerService(
+            definitionService,
+            errorService,
+            schedulerRepository,
+            jobService,
+            processorService,
+            queueableDispatchService,
+            scheduleRepository,
+            scheduleService,
+            workerService,
+            new QueuesQueueEventService()
+        );
+    }
+
+    private static QueuesJobSchedulerService newSchedulerService(
+        final QueuesDefinitionService definitionService,
+        final QueuesErrorService errorService,
+        final QueuesJobSchedulerRepository schedulerRepository,
+        final QueuesJobService jobService,
+        final QueuesProcessorService processorService,
+        final QueuesQueueableDispatchService queueableDispatchService,
+        final QueuesScheduleRepository scheduleRepository,
+        final QueuesJobSchedulerSchedule scheduleService,
+        final QueuesWorkerService workerService,
+        final QueuesQueueEventService queueEventService
+    ) {
         return new QueuesJobSchedulerService(
             definitionService,
             errorService,
@@ -2795,7 +2876,8 @@ private class QueuesJobSchedulerServiceTest {
             scheduleRepository,
             scheduleService,
             new QueuesFlowProducerService(),
-            workerService
+            workerService,
+            queueEventService
         );
     }
 

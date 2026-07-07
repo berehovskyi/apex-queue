@@ -60,17 +60,10 @@ public inherited sharing class QueuesJobSchedulerSchedule {
     @TestVisible
     private static String buildOneShotCronExpression(final Datetime runAt) {
         QueuesSupport.notNull(runAt, 'runAt');
-        return runAt.second() +
-            ' ' +
-            runAt.minute() +
-            ' ' +
-            runAt.hour() +
-            ' ' +
-            runAt.day() +
-            ' ' +
-            runAt.month() +
-            ' ? ' +
-            runAt.year();
+        return String.format(
+            '{0} {1} {2} {3} {4} ? {5}',
+            new List<Integer>{ runAt.second(), runAt.minute(), runAt.hour(), runAt.day(), runAt.month(), runAt.year() }
+        );
     }
 
     private static String resolveEveryJobName(final Id jobSchedulerRecordId) {
@@ -83,7 +76,7 @@ public inherited sharing class QueuesJobSchedulerSchedule {
 
     private static String resolveJobNamePrefix(final String prefix, final Id jobSchedulerRecordId) {
         QueuesSupport.notNull(jobSchedulerRecordId, 'jobSchedulerRecordId');
-        return resolveBaseJobNamePrefix(prefix) + jobSchedulerRecordId + ' ';
+        return String.format('{0}{1} ', new List<Object>{ resolveBaseJobNamePrefix(prefix), jobSchedulerRecordId });
     }
 
     private static String resolveBaseJobNamePrefix(final String prefix) {

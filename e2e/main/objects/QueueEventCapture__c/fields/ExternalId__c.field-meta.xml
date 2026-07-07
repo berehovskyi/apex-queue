@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Queue-scoped job id copied from the delivered event.</description>
+    <fullName>ExternalId__c</fullName>
+    <label>External Id</label>
+    <length>174</length>
+    <type>Text</type>
+</CustomField>

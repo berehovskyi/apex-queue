@@ -35,7 +35,8 @@ private class QueuesJobExecutionServiceTest {
             jobServiceStub,
             jobRunStub,
             processorStub,
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -72,7 +73,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -105,7 +107,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -161,7 +164,8 @@ private class QueuesJobExecutionServiceTest {
             jobServiceStub,
             jobRunStub,
             processorStub,
-            (QueuesFlowProducerService) Test.createStub(QueuesFlowProducerService.class, flowProducerProvider)
+            (QueuesFlowProducerService) Test.createStub(QueuesFlowProducerService.class, flowProducerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -216,7 +220,8 @@ private class QueuesJobExecutionServiceTest {
             jobServiceStub,
             jobRunStub,
             processorStub,
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -266,7 +271,8 @@ private class QueuesJobExecutionServiceTest {
             jobServiceStub,
             jobRunStub,
             processorStub,
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -319,7 +325,8 @@ private class QueuesJobExecutionServiceTest {
             jobServiceStub,
             jobRunStub,
             processorStub,
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -380,7 +387,8 @@ private class QueuesJobExecutionServiceTest {
             jobServiceStub,
             jobRunStub,
             processorStub,
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -424,7 +432,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -471,7 +480,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -522,7 +532,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -568,7 +579,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -612,7 +624,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -651,7 +664,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -700,7 +714,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -769,7 +784,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -822,7 +838,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -856,7 +873,8 @@ private class QueuesJobExecutionServiceTest {
                 new QueuesJobService(),
                 new QueuesJobRunService(),
                 (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -904,7 +922,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -949,7 +968,8 @@ private class QueuesJobExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, runServiceProvider),
             (QueuesProcessorService) Test.createStub(QueuesProcessorService.class, processorProvider),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -985,7 +1005,8 @@ private class QueuesJobExecutionServiceTest {
                 QueuesProcessorService.class,
                 new QueuesTestSupport.RecordingStubProvider()
             ),
-            (QueuesFlowProducerService) Test.createStub(QueuesFlowProducerService.class, flowProducerProvider)
+            (QueuesFlowProducerService) Test.createStub(QueuesFlowProducerService.class, flowProducerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1031,7 +1052,8 @@ private class QueuesJobExecutionServiceTest {
                 QueuesProcessorService.class,
                 new QueuesTestSupport.RecordingStubProvider()
             ),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1072,7 +1094,8 @@ private class QueuesJobExecutionServiceTest {
                 QueuesProcessorService.class,
                 new QueuesTestSupport.RecordingStubProvider()
             ),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
 
         // Act

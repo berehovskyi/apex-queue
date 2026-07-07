@@ -2267,7 +2267,8 @@ private class QueuesServiceTest {
                 (QueuesAsyncApexJobRepository) Test.createStub(
                     QueuesAsyncApexJobRepository.class,
                     asyncApexJobRepositoryProvider
-                )
+                ),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -2396,7 +2397,8 @@ private class QueuesServiceTest {
                     repositoryProvider
                 ),
                 (QueuesJobRepository) Test.createStub(QueuesJobRepository.class, jobRepositoryProvider),
-                new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE)
+                new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
+                new QueuesQueueEventService()
             );
 
             // Act

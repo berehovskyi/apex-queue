@@ -7,7 +7,9 @@
  */
 @SuppressWarnings('PMD.ApexDoc')
 public inherited sharing class QueuesProcessorService {
+    private static final String INVALID_PROCESSOR_INTERFACE_MESSAGE = 'Processor "{0}" does not implement a queue processor interface.';
     private static final String MISSING_PROCESSOR_MESSAGE = 'Processor "{0}" does not have an active processor metadata mapping.';
+    private static final String UNRESOLVED_PROCESSOR_MESSAGE = 'Processor "{0}" could not be resolved. Please ensure this class exists, is accessible, and has a public no-argument constructor.';
 
     private QueuesProcessorRepository repository = new QueuesProcessorRepository(System.AccessLevel.SYSTEM_MODE);
 
@@ -69,9 +71,7 @@ public inherited sharing class QueuesProcessorService {
         QueuesSupport.isTrue(
             processorType != null,
             new Queues.ConfigurationException(
-                'Processor "' +
-                    processorClassName +
-                    '" could not be resolved. Please ensure this class exists, is accessible, and has a public no-argument constructor.'
+                String.format(UNRESOLVED_PROCESSOR_MESSAGE, new List<String>{ processorClassName })
             )
         );
         return processorType.newInstance();
@@ -83,7 +83,7 @@ public inherited sharing class QueuesProcessorService {
             return ((Queues.JobProcessor) processor).process(ctx);
         }
         throw new Queues.ConfigurationException(
-            'Processor "' + job.ProcessorClass__c + '" does not implement a queue processor interface.'
+            String.format(INVALID_PROCESSOR_INTERFACE_MESSAGE, new List<String>{ job.ProcessorClass__c })
         );
     }
     // </editor-fold>

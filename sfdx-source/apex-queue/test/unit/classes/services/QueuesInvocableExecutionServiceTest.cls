@@ -10,14 +10,26 @@ private class QueuesInvocableExecutionServiceTest {
     static void should_claim_due_invocable_job() {
         // Arrange
         Id jobId = QueuesTestSupport.fakeId(Job__c.SObjectType, 715);
-        List<Job__c> claimedJobs = new List<Job__c>{ new Job__c(Id = jobId, State__c = Queues.State.ACTIVE.name()) };
+        List<Job__c> claimedJobs = new List<Job__c>{
+            new Job__c(
+                Id = jobId,
+                QueueName__c = QueuesTestSupport.DEFAULT_QUEUE_NAME,
+                State__c = Queues.State.ACTIVE.name()
+            )
+        };
         QueuesTestSupport.RecordingStubProvider jobServiceProvider = new QueuesTestSupport.RecordingStubProvider()
             .withReturn('claimInvocableJobsAsSystem', claimedJobs);
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
         QueuesInvocableExecutionService service = new QueuesInvocableExecutionService(
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             new QueuesJobExecutionService(),
             new QueuesJobRunService(),
-            new QueuesStalledJobRecoveryService()
+            new QueuesStalledJobRecoveryService(),
+            QueuesTestSupport.newRecordingQueueEventService(
+                QueuesTestSupport.DEFAULT_QUEUE_NAME,
+                'ACTIVE',
+                eventProvider
+            )
         );
 
         // Act
@@ -30,6 +42,10 @@ private class QueuesInvocableExecutionServiceTest {
             new Set<Id>{ jobId },
             (Set<Id>) jobServiceProvider.getLastArgs('claimInvocableJobsAsSystem')[0]
         );
+        Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+        List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+        Assert.areEqual('ACTIVE', events[0].Type__c);
+        Assert.areEqual(String.valueOf(jobId), events[0].JobId__c);
     }
 
     @IsTest
@@ -45,7 +61,8 @@ private class QueuesInvocableExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobExecutionService) Test.createStub(QueuesJobExecutionService.class, executionProvider),
             new QueuesJobRunService(),
-            new QueuesStalledJobRecoveryService(new QueuesJobService(), new QueuesJobRunService())
+            new QueuesStalledJobRecoveryService(new QueuesJobService(), new QueuesJobRunService()),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -71,7 +88,8 @@ private class QueuesInvocableExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobExecutionService) Test.createStub(QueuesJobExecutionService.class, executionProvider),
             new QueuesJobRunService(),
-            new QueuesStalledJobRecoveryService()
+            new QueuesStalledJobRecoveryService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -99,7 +117,8 @@ private class QueuesInvocableExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             (QueuesJobExecutionService) Test.createStub(QueuesJobExecutionService.class, executionProvider),
             new QueuesJobRunService(),
-            new QueuesStalledJobRecoveryService()
+            new QueuesStalledJobRecoveryService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -150,7 +169,8 @@ private class QueuesInvocableExecutionServiceTest {
             jobService,
             new QueuesJobExecutionService(),
             jobRunService,
-            new QueuesStalledJobRecoveryService()
+            new QueuesStalledJobRecoveryService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -204,7 +224,8 @@ private class QueuesInvocableExecutionServiceTest {
             (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
             new QueuesJobExecutionService(),
             new QueuesJobRunService(),
-            (QueuesStalledJobRecoveryService) Test.createStub(QueuesStalledJobRecoveryService.class, recoveryProvider)
+            (QueuesStalledJobRecoveryService) Test.createStub(QueuesStalledJobRecoveryService.class, recoveryProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -232,7 +253,8 @@ private class QueuesInvocableExecutionServiceTest {
             jobService,
             new QueuesJobExecutionService(),
             new QueuesJobRunService(),
-            new QueuesStalledJobRecoveryService()
+            new QueuesStalledJobRecoveryService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -269,7 +291,8 @@ private class QueuesInvocableExecutionServiceTest {
             jobService,
             new QueuesJobExecutionService(),
             new QueuesJobRunService(),
-            new QueuesStalledJobRecoveryService()
+            new QueuesStalledJobRecoveryService(),
+            new QueuesQueueEventService()
         );
 
         // Act

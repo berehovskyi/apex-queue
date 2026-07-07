@@ -19,11 +19,6 @@ public without sharing class QueuesMaintenanceWorker implements Queueable, Final
     }
 
     @TestVisible
-    private QueuesMaintenanceWorker(final QueuesService queueService, final QueuesMaintenanceWorker.Task task) {
-        this(queueService, new QueuesErrorService(), task, false);
-    }
-
-    @TestVisible
     private QueuesMaintenanceWorker(
         final QueuesService queueService,
         final QueuesErrorService errorService,
@@ -60,10 +55,10 @@ public without sharing class QueuesMaintenanceWorker implements Queueable, Final
             errorService.recordQueueError(MAINTENANCE_QUEUE_NAME, resolveComponent(), null, asyncApexJobId, failure);
         } catch (Exception ex) {
             QueuesSupport.debugError(
-                'Maintenance finalizer failed to record queue error.\n' +
-                    ex.getMessage() +
-                    '\n' +
-                    ex.getStackTraceString()
+                String.format(
+                    'Maintenance finalizer failed to record queue error.\n{0}\n{1}',
+                    new List<String>{ ex.getMessage(), ex.getStackTraceString() }
+                )
             );
         }
     }

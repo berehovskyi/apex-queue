@@ -103,6 +103,10 @@ private class QueuesUtilsTest {
             }
         );
         String normalizedEnumValue = QueuesSupport.normalizeEnumValue(' waiting children ');
+        String truncatedValue = QueuesSupport.truncate('abcdef', 3);
+        String untruncatedValue = QueuesSupport.truncate('abc', 3);
+        String emptyTruncatedValue = QueuesSupport.truncate('abc', 0);
+        String nullTruncatedValue = QueuesSupport.truncate(null, 3);
         String queueScopedExternalId = QueuesSupport.buildQueueScopedExternalId('invoice-sync', 'invoice:INV-001');
         String sameQueueScopedExternalId = QueuesSupport.buildQueueScopedExternalId('invoice-sync', 'invoice:INV-001');
         String differentQueueScopedExternalId = QueuesSupport.buildQueueScopedExternalId(
@@ -138,6 +142,10 @@ private class QueuesUtilsTest {
         Assert.areEqual(null, unknownQueueableDispatchState);
         Assert.areEqual(new Set<String>{ 'ACTIVE', 'WAITING' }, queueableDispatchStateValues);
         Assert.areEqual('WAITING_CHILDREN', normalizedEnumValue);
+        Assert.areEqual('abc', truncatedValue);
+        Assert.areEqual('abc', untruncatedValue);
+        Assert.areEqual('', emptyTruncatedValue);
+        Assert.areEqual(null, nullTruncatedValue);
         Assert.areEqual('invoice-sync:invoice:INV-001', queueScopedExternalId);
         Assert.areEqual(queueScopedExternalId, sameQueueScopedExternalId);
         Assert.areEqual(true, String.isNotBlank(queueScopedExternalId));

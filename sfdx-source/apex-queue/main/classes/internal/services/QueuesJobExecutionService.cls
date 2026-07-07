@@ -7,6 +7,9 @@
  */
 @SuppressWarnings('PMD.ApexDoc')
 public inherited sharing class QueuesJobExecutionService {
+    private static final String INACTIVE_PROCESSOR_MAPPING_MESSAGE = 'Processor "{0}" has an inactive processor metadata mapping.';
+    private static final String MISSING_PROCESSOR_MAPPING_MESSAGE = 'Processor "{0}" does not have a processor metadata mapping.';
+    private static final String UNSUPPORTED_PROCESSOR_OUTCOME_MESSAGE = 'Unsupported processor outcome "{0}".';
     private static final Set<Queues.State> RUNNABLE_COMPLETION_STATES = new Set<Queues.State>{
         Queues.State.WAITING,
         Queues.State.DELAYED
@@ -15,6 +18,7 @@ public inherited sharing class QueuesJobExecutionService {
     private QueuesJobService jobService = new QueuesJobService();
     private QueuesJobRunService jobRunService = new QueuesJobRunService();
     private QueuesProcessorService processorService = new QueuesProcessorService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     // Lazily constructed to break the FlowProducer -> Worker -> JobExecution -> FlowProducer construction cycle.
     private final QueuesFlowProducerService flowProducerService {
@@ -35,12 +39,14 @@ public inherited sharing class QueuesJobExecutionService {
         final QueuesJobService jobService,
         final QueuesJobRunService jobRunService,
         final QueuesProcessorService processorService,
-        final QueuesFlowProducerService flowProducerService
+        final QueuesFlowProducerService flowProducerService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.jobService = jobService;
         this.jobRunService = jobRunService;
         this.processorService = processorService;
         this.flowProducerService = flowProducerService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Execution">
@@ -87,6 +93,7 @@ public inherited sharing class QueuesJobExecutionService {
         );
         jobRunService.addTimestamps(run, now.getTime(), now);
         jobRunService.insertJobRunsAsSystem(new List<JobRun__c>{ run });
+        queueEventService.publishTerminalJobEvents(new List<Job__c>{ job }, new List<JobRun__c>{ run });
         flowProducerService.deferParentDependenciesAsSystem(new List<Job__c>{ job });
         return job;
     }
@@ -115,6 +122,7 @@ public inherited sharing class QueuesJobExecutionService {
         );
         jobRunService.addTimestamps(run, now.getTime(), now);
         jobRunService.insertJobRunsAsSystem(new List<JobRun__c>{ run });
+        queueEventService.publishTerminalJobEvents(new List<Job__c>{ job }, new List<JobRun__c>{ run });
         flowProducerService.resolveParentDependenciesAsSystem(new List<Job__c>{ job });
         return job;
     }
@@ -271,13 +279,13 @@ public inherited sharing class QueuesJobExecutionService {
         QueuesSupport.isTrue(
             processorDefinition != null,
             new Queues.ConfigurationException(
-                'Processor "' + processorClassName + '" does not have a processor metadata mapping.'
+                String.format(MISSING_PROCESSOR_MAPPING_MESSAGE, new List<String>{ processorClassName })
             )
         );
         QueuesSupport.isTrue(
             QueuesSupport.isActive(processorDefinition),
             new Queues.ConfigurationException(
-                'Processor "' + processorClassName + '" has an inactive processor metadata mapping.'
+                String.format(INACTIVE_PROCESSOR_MAPPING_MESSAGE, new List<String>{ processorClassName })
             )
         );
         return processorDefinition;
@@ -325,7 +333,9 @@ public inherited sharing class QueuesJobExecutionService {
                 return Queues.RunStatus.DEFERRED;
             }
             when else {
-                throw new Queues.QueueException('Unsupported processor outcome "' + result.getOutcome() + '".');
+                throw new Queues.QueueException(
+                    String.format(UNSUPPORTED_PROCESSOR_OUTCOME_MESSAGE, new List<Object>{ result.getOutcome() })
+                );
             }
         }
     }
@@ -419,6 +429,7 @@ public inherited sharing class QueuesJobExecutionService {
 
         jobService.updateJobsAsSystem(jobsToUpdate);
         jobRunService.insertJobRunsAsSystem(runs);
+        queueEventService.publishTerminalJobEvents(jobsToUpdate, runs);
         if (deferParentResolution == true) {
             flowProducerService.deferParentDependenciesAsSystem(jobsToUpdate);
         } else {

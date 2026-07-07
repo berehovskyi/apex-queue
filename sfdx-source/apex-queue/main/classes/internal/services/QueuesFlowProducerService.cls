@@ -10,8 +10,20 @@ public inherited sharing class QueuesFlowProducerService {
     private static final String CHILD_FAILED_REASON = 'Child job failed.';
     private static final String CHILD_CANCELED_REASON = 'Child job was canceled.';
     private static final String DEFAULT_DEPENDENCY_POLICY = 'DEFAULT';
+    private static final String DEPENDENCY_RESOLUTION_COMPONENT = 'dependency resolution';
     private static final String EXISTING_FLOW_EXTENSION_MESSAGE = 'Existing flow jobs can only participate in an idempotent replay; adding new children is not supported.';
+    private static final String EXISTING_FLOW_DEPENDENCIES_MESSAGE = 'Existing flow job dependencies do not match the requested flow.';
+    private static final String EXISTING_FLOW_EXECUTION_MODE_MESSAGE = 'Existing flow job execution mode does not match flow execution mode.';
+    private static final String EXISTING_FLOW_PARENT_MESSAGE = 'Existing flow job parent does not match the requested flow.';
+    private static final String FLOW_CYCLE_MESSAGE = 'Flow jobs cannot form cycles.';
+    private static final String FLOW_INSTANCE_REUSE_MESSAGE = 'Flow job instances cannot be reused within one graph.';
+    private static final String FLOW_JOB_ID_UNIQUE_MESSAGE = 'Flow jobId values must be unique within each queue.';
+    private static final String FLOW_INSERT_RESULTS_MISMATCH_MESSAGE = 'Flow job insert results did not match the requested job count.';
+    private static final String FLOW_INSERT_FAILED_MESSAGE = 'Failed to insert flow job.';
     private static final String INVALID_PARENT_OPTION_MESSAGE = 'Flow jobs do not support opts.parent(...). Define dependencies with child(...).';
+    private static final String MISSING_QUEUE_MESSAGE = 'Queue "{0}" is not configured.';
+    private static final String INACTIVE_QUEUE_MESSAGE = 'Queue "{0}" is inactive.';
+    private static final String DUPLICATE_FLOW_JOB_RESOLUTION_MESSAGE = 'Failed to resolve duplicate flow job "{0}" after insert race.';
     private static final Integer DEPENDENCY_CLEANUP_BATCH_SIZE = 200;
     private static final Integer DEPENDENCY_REPAIR_BATCH_SIZE = 50;
     private static final Integer DEPENDENCY_RESOLUTION_BATCH_COUNT_LIMIT = 10;
@@ -38,6 +50,7 @@ public inherited sharing class QueuesFlowProducerService {
     private QueuesQueueableDispatchService queueableDispatchService = new QueuesQueueableDispatchService();
     private QueuesRuntimeService runtimeService = new QueuesRuntimeService();
     private QueuesWorkerService workerService = new QueuesWorkerService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesFlowProducerService() {
     }
@@ -49,7 +62,8 @@ public inherited sharing class QueuesFlowProducerService {
         final QueuesProcessorService processorService,
         final QueuesQueueableDispatchService queueableDispatchService,
         final QueuesRuntimeService runtimeService,
-        final QueuesWorkerService workerService
+        final QueuesWorkerService workerService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.definitionService = definitionService;
         this.jobService = jobService;
@@ -57,6 +71,7 @@ public inherited sharing class QueuesFlowProducerService {
         this.queueableDispatchService = queueableDispatchService;
         this.runtimeService = runtimeService;
         this.workerService = workerService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Flows">
@@ -92,6 +107,7 @@ public inherited sharing class QueuesFlowProducerService {
         Map<String, Map<String, Job__c>> existingJobsByQueueAndExternalId = queryExistingJobs(states);
 
         Savepoint savepoint = Database.setSavepoint();
+        queueEventService.beginScope();
         try {
             insertStatesByLevel(
                 rootStates,
@@ -104,9 +120,11 @@ public inherited sharing class QueuesFlowProducerService {
             validateExistingDependencyStates(states);
             resolveParentDependenciesAsSystem(toJobs(states));
             dispatchRunnableJobs(resolveInsertedRunnableJobs(states), now, false);
+            queueEventService.commitScope();
             return toJobNodes(rootStates);
         } catch (Exception ex) {
             Database.rollback(savepoint);
+            queueEventService.abandonScope();
             throw ex;
         }
     }
@@ -223,11 +241,8 @@ public inherited sharing class QueuesFlowProducerService {
             flow.getOpts().getParentJobId() == null,
             new Queues.QueueException(INVALID_PARENT_OPTION_MESSAGE)
         );
-        QueuesSupport.isTrue(!ancestorFlows.contains(flow), new Queues.QueueException('Flow jobs cannot form cycles.'));
-        QueuesSupport.isTrue(
-            !visitedFlows.contains(flow),
-            new Queues.QueueException('Flow job instances cannot be reused within one graph.')
-        );
+        QueuesSupport.isTrue(!ancestorFlows.contains(flow), new Queues.QueueException(FLOW_CYCLE_MESSAGE));
+        QueuesSupport.isTrue(!visitedFlows.contains(flow), new Queues.QueueException(FLOW_INSTANCE_REUSE_MESSAGE));
         visitedFlows.add(flow);
         ancestorFlows.add(flow);
 
@@ -301,11 +316,11 @@ public inherited sharing class QueuesFlowProducerService {
             }
 
             String scopedExternalId = QueuesSupport.normalizeCaseInsensitiveKey(
-                state.flowJob.getQueueName() + ':' + externalId
+                String.format('{0}:{1}', new List<String>{ state.flowJob.getQueueName(), externalId })
             );
             QueuesSupport.isTrue(
                 !scopedExternalIds.contains(scopedExternalId),
-                new Queues.QueueException('Flow jobId values must be unique within each queue.')
+                new Queues.QueueException(FLOW_JOB_ID_UNIQUE_MESSAGE)
             );
             scopedExternalIds.add(scopedExternalId);
         }
@@ -349,14 +364,14 @@ public inherited sharing class QueuesFlowProducerService {
 
     private static Exception buildInsertFailure(final Database.SaveResult saveResult) {
         List<Database.Error> errors = saveResult.getErrors();
-        String message = errors.isEmpty() ? 'Failed to insert flow job.' : errors[0].getMessage();
+        String message = errors.isEmpty() ? FLOW_INSERT_FAILED_MESSAGE : errors[0].getMessage();
         return new Queues.QueueException(message);
     }
 
     private static void requireMatchingExecutionMode(final Job__c job, final Queues.ExecutionMode executionMode) {
         QueuesSupport.isTrue(
             QueuesSupport.toExecutionMode(job.ExecutionMode__c) == executionMode,
-            new Queues.QueueException('Existing flow job execution mode does not match flow execution mode.')
+            new Queues.QueueException(EXISTING_FLOW_EXECUTION_MODE_MESSAGE)
         );
     }
 
@@ -364,7 +379,7 @@ public inherited sharing class QueuesFlowProducerService {
         Id expectedParentId = state.parent?.job?.Id;
         QueuesSupport.isTrue(
             job.Parent__c == expectedParentId,
-            new Queues.QueueException('Existing flow job parent does not match the requested flow.')
+            new Queues.QueueException(EXISTING_FLOW_PARENT_MESSAGE)
         );
     }
 
@@ -608,7 +623,7 @@ public inherited sharing class QueuesFlowProducerService {
                 }
                 QueuesSupport.isTrue(
                     isTerminalJob(child.job),
-                    new Queues.QueueException('Existing flow job dependencies do not match the requested flow.')
+                    new Queues.QueueException(EXISTING_FLOW_DEPENDENCIES_MESSAGE)
                 );
             }
         }
@@ -709,11 +724,11 @@ public inherited sharing class QueuesFlowProducerService {
             QueueDefinition__mdt definition = queueDefinitionsByName.get(queueName);
             QueuesSupport.isTrue(
                 definition != null,
-                new Queues.ConfigurationException('Queue "' + queueName + '" is not configured.')
+                new Queues.ConfigurationException(String.format(MISSING_QUEUE_MESSAGE, new List<String>{ queueName }))
             );
             QueuesSupport.isTrue(
                 QueuesSupport.isActive(definition),
-                new Queues.ConfigurationException('Queue "' + queueName + '" is inactive.')
+                new Queues.ConfigurationException(String.format(INACTIVE_QUEUE_MESSAGE, new List<String>{ queueName }))
             );
         }
         return queueDefinitionsByName;
@@ -822,10 +837,7 @@ public inherited sharing class QueuesFlowProducerService {
         final List<FlowNodeState> states,
         final List<Database.SaveResult> saveResults
     ) {
-        QueuesSupport.isTrue(
-            saveResults.size() == jobs.size(),
-            'Flow job insert results did not match the requested job count.'
-        );
+        QueuesSupport.isTrue(saveResults.size() == jobs.size(), FLOW_INSERT_RESULTS_MISMATCH_MESSAGE);
 
         for (Integer index = 0; index < jobs.size(); index++) {
             Job__c job = jobs[index];
@@ -857,7 +869,7 @@ public inherited sharing class QueuesFlowProducerService {
         );
         QueuesSupport.isTrue(
             resolvedJob != null,
-            'Failed to resolve duplicate flow job "' + duplicateJob.ExternalId__c + '" after insert race.'
+            String.format(DUPLICATE_FLOW_JOB_RESOLUTION_MESSAGE, new List<String>{ duplicateJob.ExternalId__c })
         );
         requireExistingJob(resolvedJob, state, QueuesSupport.toExecutionMode(duplicateJob.ExecutionMode__c));
         return resolvedJob;
@@ -889,6 +901,7 @@ public inherited sharing class QueuesFlowProducerService {
         }
 
         jobService.updateJobsAsSystem(parentsToUpdate);
+        queueEventService.publishTerminalJobEvents(parentsToUpdate, null, DEPENDENCY_RESOLUTION_COMPONENT);
         return parentsToUpdate;
     }
 

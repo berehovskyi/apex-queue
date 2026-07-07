@@ -11,6 +11,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
     private static final Integer INITIAL_QUEUEABLE_STACK_DEPTH = 5;
     private static final Integer DUPLICATE_SIGNATURE_MAX_BYTES = 32;
     private static final String COMPRESSED_DUPLICATE_SIGNATURE_PREFIX = 'q:';
+    private static final String INVALID_QUEUEABLE_EXECUTION_MODE_MESSAGE = 'queueable execution mode is invalid.';
     private static final Set<Queues.State> DISPATCHABLE_JOB_STATES = new Set<Queues.State>{
         Queues.State.WAITING,
         Queues.State.DELAYED
@@ -37,6 +38,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
     private QueuesAsyncApexJobRepository asyncApexJobRepository = new QueuesAsyncApexJobRepository(
         System.AccessLevel.SYSTEM_MODE
     );
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesQueueableDispatchService() {
     }
@@ -45,12 +47,14 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
     private QueuesQueueableDispatchService(
         final QueuesQueueableDispatchRepository dispatchRepository,
         final QueuesJobRepository jobRepository,
-        final QueuesAsyncApexJobRepository asyncApexJobRepository
+        final QueuesAsyncApexJobRepository asyncApexJobRepository,
+        final QueuesQueueEventService queueEventService
     ) {
         this.userModeDispatchRepository = dispatchRepository;
         this.systemModeDispatchRepository = dispatchRepository;
         this.jobRepository = jobRepository;
         this.asyncApexJobRepository = asyncApexJobRepository;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Future Bridges">
@@ -121,7 +125,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
         }
         QueuesSupport.isTrue(
             QueuesSupport.isQueueableExecutionMode(executionMode),
-            new Queues.QueueException('queueable execution mode is invalid.')
+            new Queues.QueueException(INVALID_QUEUEABLE_EXECUTION_MODE_MESSAGE)
         );
 
         QueueableDispatch__c dispatch = new QueueableDispatch__c(
@@ -369,6 +373,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
         }
 
         jobRepository.updateJobs(new List<Job__c>{ job });
+        publishActiveJobs(new List<Job__c>{ job });
         return markDispatchJobsResolved(dispatch, now, jobs.size());
     }
 
@@ -409,6 +414,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
         }
 
         jobRepository.updateJobs(jobsToUpdate);
+        publishActiveJobs(jobsToUpdate);
         return markDispatchJobsResolved(dispatch, now, jobs.size());
     }
 
@@ -447,7 +453,18 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
             job.QueueableDispatchInitiatedAt__c = now;
         }
         jobRepository.updateJobs(new List<Job__c>{ job });
+        publishActiveJobs(new List<Job__c>{ job });
         return job;
+    }
+
+    private void publishActiveJobs(final List<Job__c> jobs) {
+        List<Job__c> activeJobs = new List<Job__c>();
+        for (Job__c job : jobs ?? new List<Job__c>()) {
+            if (QueuesSupport.toState(job.State__c) == Queues.State.ACTIVE) {
+                activeJobs.add(job);
+            }
+        }
+        queueEventService.publishActiveJobEvents(activeJobs);
     }
 
     private static Boolean isDispatchableQueueableJob(final Job__c job) {
@@ -560,7 +577,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
         options.maximumQueueableStackDepth = INITIAL_QUEUEABLE_STACK_DEPTH;
         if (String.isNotBlank(dedupeKey)) {
             QueuesSupport.notBlank(queueName, 'queueName');
-            String compositeKey = queueName + ':' + dedupeKey;
+            String compositeKey = String.format('{0}:{1}', new List<String>{ queueName, dedupeKey });
             options.duplicateSignature = QueueableDuplicateSignature.builder()
                 .addString(resolveDispatcherDuplicateSignature(compositeKey))
                 .build();

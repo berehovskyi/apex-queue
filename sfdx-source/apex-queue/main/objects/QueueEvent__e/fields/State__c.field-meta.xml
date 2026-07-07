@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Job state associated with the event when the event is tied to a job.</description>
+    <fullName>State__c</fullName>
+    <label>State</label>
+    <length>40</length>
+    <type>Text</type>
+</CustomField>

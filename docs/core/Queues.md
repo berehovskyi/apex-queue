@@ -1,6 +1,6 @@
 # Queues Class
 
-`APIVERSION: 66`
+`APIVERSION: 67`
 `STATUS: ACTIVE`
 
 Durable, BullMQ-inspired background job framework for Salesforce Apex. `Queues` is the single
@@ -179,6 +179,27 @@ result whose done is false when the sweep stopped early and must be continued in
 
 ---
 
+### `runTerminalCleanupMaintenance()`
+
+Runs one bounded terminal-cleanup sweep in the current transaction. Queues whose
+`QueueDefinition__mdt.TerminalCleanupPolicy__c` is `DELETE` remove eligible terminal
+`Job__c` rows according to their per-state retention fields. `JobRun__c` rows are removed
+by master-detail cascade.
+
+#### Signature
+
+```apex
+public static MaintenanceResult runTerminalCleanupMaintenance();
+```
+
+#### Return Type
+
+**MaintenanceResult**
+
+result whose done is false when cleanup stopped early and must be continued in a later transaction
+
+---
+
 ### `scheduleMaintenance()`
 
 Schedules the recurring maintenance job at the default hourly cadence ( `0 0 * * * ?` ).
@@ -279,7 +300,7 @@ true when a maintenance schedule exists
 
 ### MaintenanceResult Class
 
-Outcome of a maintenance sweep. `total` is the count of items recovered or repaired,
+Outcome of a maintenance sweep. `total` is the count of items processed,
 `done` reports whether the sweep finished or stopped early to preserve governor headroom,
 and `countsByQueueName` breaks the total down per queue.
 
@@ -293,7 +314,7 @@ Boolean finished = result.done;
 
 ##### `total`
 
-Total number of items recovered or repaired across all queues.
+Total number of items processed across all queues.
 
 ###### Signature
 
@@ -325,7 +346,7 @@ Boolean
 
 ##### `countsByQueueName`
 
-Per-queue breakdown of recovered or repaired items, keyed by queue name.
+Per-queue breakdown of processed items, keyed by queue name.
 
 ###### Signature
 
@@ -353,7 +374,7 @@ public MaintenanceResult();
 
 ##### `add(queueName, count)`
 
-Adds recovered or repaired items for a queue, updating `total` and the per-queue count.
+Adds processed items for a queue, updating `total` and the per-queue count.
 
 ###### Signature
 
@@ -396,7 +417,7 @@ this result for fluent chaining
 
 ##### `getCount(queueName)`
 
-Returns the number of items recovered or repaired for a single queue.
+Returns the number of items processed for a single queue.
 
 ###### Signature
 
@@ -414,7 +435,7 @@ public Integer getCount(String queueName);
 
 **Integer**
 
-recovered or repaired count for queueName, or 0 when none
+processed count for queueName, or 0 when none
 
 ### WorkerStatus Class
 
@@ -3465,6 +3486,90 @@ QueueException: when jobId is blank or longer than 174 characters
 
 ---
 
+##### `category(category)`
+
+Sets an optional SOQL-friendly job category.
+
+###### Signature
+
+```apex
+public JobOptions category(String category);
+```
+
+###### Parameters
+
+| Name     | Type   | Description                            |
+| -------- | ------ | -------------------------------------- |
+| category | String | category value, 80 characters or fewer |
+
+###### Return Type
+
+**JobOptions**
+
+this options object for fluent chaining
+
+###### Throws
+
+QueueException: when category is blank or too long
+
+---
+
+##### `groupKey(groupKey)`
+
+Sets an optional indexed business grouping key, such as an order or customer id.
+
+###### Signature
+
+```apex
+public JobOptions groupKey(String groupKey);
+```
+
+###### Parameters
+
+| Name     | Type   | Description                           |
+| -------- | ------ | ------------------------------------- |
+| groupKey | String | grouping key, 255 characters or fewer |
+
+###### Return Type
+
+**JobOptions**
+
+this options object for fluent chaining
+
+###### Throws
+
+QueueException: when groupKey is blank or too long
+
+---
+
+##### `correlationId(correlationId)`
+
+Sets an optional indexed correlation id for cross-system tracing.
+
+###### Signature
+
+```apex
+public JobOptions correlationId(String correlationId);
+```
+
+###### Parameters
+
+| Name          | Type   | Description                             |
+| ------------- | ------ | --------------------------------------- |
+| correlationId | String | correlation id, 255 characters or fewer |
+
+###### Return Type
+
+**JobOptions**
+
+this options object for fluent chaining
+
+###### Throws
+
+QueueException: when correlationId is blank or too long
+
+---
+
 ##### `attempts(attempts)`
 
 Sets the maximum number of execution attempts.
@@ -3810,6 +3915,54 @@ public String getJobId();
 **String**
 
 configured idempotency key, or null when unset
+
+---
+
+##### `getCategory()`
+
+###### Signature
+
+```apex
+public String getCategory();
+```
+
+###### Return Type
+
+**String**
+
+configured job category, or null when unset
+
+---
+
+##### `getGroupKey()`
+
+###### Signature
+
+```apex
+public String getGroupKey();
+```
+
+###### Return Type
+
+**String**
+
+configured grouping key, or null when unset
+
+---
+
+##### `getCorrelationId()`
+
+###### Signature
+
+```apex
+public String getCorrelationId();
+```
+
+###### Return Type
+
+**String**
+
+configured correlation id, or null when unset
 
 ---
 

@@ -41,9 +41,15 @@ Defines queue-level defaults for the Apex queue runtime.
 
 ### [QueueErrorEvent\_\_e](custom-objects\QueueErrorEvent__e.md)
 
+Platform event emitted immediately when the framework records an operational queue error.
+
 ### [QueueError\_\_c](custom-objects\QueueError__c.md)
 
 Stores queue-level operational failures, optionally linked to the related queue job or native async execution.
+
+### [QueueEvent\_\_e](custom-objects\QueueEvent__e.md)
+
+Opt-in platform event emitted after durable queue state changes. Events are best-effort telemetry and do not participate in job durability.
 
 ### [QueueRuntime\_\_c](custom-objects\QueueRuntime__c.md)
 

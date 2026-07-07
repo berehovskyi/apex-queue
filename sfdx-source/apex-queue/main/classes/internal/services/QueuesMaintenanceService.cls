@@ -8,6 +8,7 @@
 @SuppressWarnings('PMD.ApexDoc')
 public inherited sharing class QueuesMaintenanceService {
     private static final String BATCH_WORKER_CLASS_NAME = QueuesBatchableWorker.class.getName();
+    private static final String INVALID_RETENTION_DAYS_MESSAGE = '{0} must be zero or greater.';
     private static final Integer MINIMUM_ACTIVE_WORKER_COUNT = 0;
     private static final Integer ORPHANED_PROCESSING_ASYNC_WORKER_GRACE_MINUTES = 1;
     private static final Integer ORPHANED_PENDING_ASYNC_WORKER_GRACE_MINUTES = 15;
@@ -21,6 +22,8 @@ public inherited sharing class QueuesMaintenanceService {
     private static final String ORPHANED_ASYNC_WORKER_QUEUE_NAME = '[orphaned async worker]';
     private static final String ORPHANED_SCHEDULED_WORKER_QUEUE_NAME = '[orphaned scheduled worker]';
     private static final String RUNTIME_MAINTENANCE_COMPONENT = 'runtime maintenance';
+    private static final String DEPENDENCY_REPAIR_COMPONENT = 'dependency repair';
+    private static final String DEPENDENCY_CLEANUP_REPAIR_COMPONENT = 'dependency cleanup repair';
     private static final String TERMINAL_CLEANUP_COMPONENT = 'terminal cleanup';
     private static final String TERMINAL_CLEANUP_DELETE_POLICY = 'DELETE';
     private static final String WORKER_JOB_NAME_PREFIX = 'Queues:';
@@ -64,6 +67,7 @@ public inherited sharing class QueuesMaintenanceService {
     private QueuesQueueAdminService queueAdminService = new QueuesQueueAdminService();
     private QueuesRuntimeRepository runtimeRepository = new QueuesRuntimeRepository(System.AccessLevel.SYSTEM_MODE);
     private QueuesScheduleRepository scheduleRepository = new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE);
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
     @TestVisible
     private static Integer terminalCleanupDmlRowBudgetOverride;
     @TestVisible
@@ -83,7 +87,8 @@ public inherited sharing class QueuesMaintenanceService {
         final QueuesScheduleRepository scheduleRepository,
         final QueuesInvocableExecutionService invocableExecutionService,
         final QueuesQueueableDispatchRepository queueableDispatchRepository,
-        final QueuesFlowProducerService flowProducerService
+        final QueuesFlowProducerService flowProducerService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.asyncApexJobRepository = asyncApexJobRepository;
         this.definitionService = definitionService;
@@ -95,6 +100,7 @@ public inherited sharing class QueuesMaintenanceService {
         this.invocableExecutionService = invocableExecutionService;
         this.queueableDispatchRepository = queueableDispatchRepository;
         this.flowProducerService = flowProducerService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Maintenance">
@@ -133,6 +139,7 @@ public inherited sharing class QueuesMaintenanceService {
             }
 
             Savepoint savepoint = Database.setSavepoint();
+            queueEventService.beginScope();
             try {
                 Integer recoveredCount = 0;
                 if (runtimeQueueNames.contains(queueName)) {
@@ -145,20 +152,34 @@ public inherited sharing class QueuesMaintenanceService {
                     );
                 }
                 if (dependencyQueueNames.contains(queueName)) {
-                    recoveredCount += flowProducerService.repairStaleParentDependenciesAsSystem(
+                    Integer dependencyRecoveredCount = flowProducerService.repairStaleParentDependenciesAsSystem(
                         queueName,
                         QueuesSupport.now().addMinutes(-definitionService.getLeaseMinutes(queueDefinition))
                     );
+                    queueEventService.publishRecovered(
+                        queueName,
+                        DEPENDENCY_REPAIR_COMPONENT,
+                        dependencyRecoveredCount
+                    );
+                    recoveredCount += dependencyRecoveredCount;
                 }
                 if (dependencyCleanupQueueNames.contains(queueName)) {
-                    recoveredCount += flowProducerService.repairStaleRemovedFailureDependenciesAsSystem(
+                    Integer dependencyCleanupRecoveredCount = flowProducerService.repairStaleRemovedFailureDependenciesAsSystem(
                         queueName,
                         QueuesSupport.now().addMinutes(-definitionService.getLeaseMinutes(queueDefinition))
                     );
+                    queueEventService.publishRecovered(
+                        queueName,
+                        DEPENDENCY_CLEANUP_REPAIR_COMPONENT,
+                        dependencyCleanupRecoveredCount
+                    );
+                    recoveredCount += dependencyCleanupRecoveredCount;
                 }
                 result.add(queueName, recoveredCount);
+                queueEventService.commitScope();
             } catch (Exception ex) {
                 Database.rollback(savepoint);
+                queueEventService.abandonScope();
                 errorService.recordQueueError(queueName, RUNTIME_MAINTENANCE_COMPONENT, ex);
                 result.markIncomplete();
             }
@@ -189,15 +210,19 @@ public inherited sharing class QueuesMaintenanceService {
             }
 
             Savepoint savepoint = Database.setSavepoint();
+            queueEventService.beginScope();
             try {
                 TerminalCleanupCutoffs cutoffs = resolveTerminalCleanupCutoffs(queueDefinition, QueuesSupport.now());
                 TerminalCleanupResult cleanupResult = deleteExpiredTerminalJobs(queueName, cutoffs);
                 result.add(queueName, cleanupResult.deletedCount);
+                queueEventService.publishCleaned(queueName, TERMINAL_CLEANUP_COMPONENT, cleanupResult.deletedCount);
                 if (!cleanupResult.completed) {
                     result.markIncomplete();
                 }
+                queueEventService.commitScope();
             } catch (Exception ex) {
                 Database.rollback(savepoint);
+                queueEventService.abandonScope();
                 errorService.recordQueueError(queueName, TERMINAL_CLEANUP_COMPONENT, ex);
                 result.markIncomplete();
             }
@@ -468,14 +493,10 @@ public inherited sharing class QueuesMaintenanceService {
             );
         } catch (Exception loggingEx) {
             QueuesSupport.debugError(
-                'Failed to log orphaned ' +
-                    workerType +
-                    ' abort failure ' +
-                    workerJobId +
-                    ': ' +
-                    loggingEx.getMessage() +
-                    '\n' +
-                    loggingEx.getStackTraceString()
+                String.format(
+                    'Failed to log orphaned {0} abort failure {1}: {2}\n{3}',
+                    new List<String>{ workerType, workerJobId, loggingEx.getMessage(), loggingEx.getStackTraceString() }
+                )
             );
         }
     }
@@ -561,7 +582,9 @@ public inherited sharing class QueuesMaintenanceService {
         }
         QueuesSupport.isTrue(
             retentionDays >= 0,
-            new Queues.ConfigurationException(fieldName + ' must be zero or greater.')
+            new Queues.ConfigurationException(
+                String.format(INVALID_RETENTION_DAYS_MESSAGE, new List<String>{ fieldName })
+            )
         );
         return currentNow.addSeconds(-retentionDays * SECONDS_PER_DAY);
     }

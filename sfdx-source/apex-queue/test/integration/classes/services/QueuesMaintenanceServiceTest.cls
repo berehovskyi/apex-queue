@@ -56,7 +56,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -71,6 +72,75 @@ private class QueuesMaintenanceServiceTest {
             Assert.areEqual(1, recovered.getCount('invoice-sync'));
             Assert.areEqual(2, recovered.getCount('payments-sync'));
             Assert.areEqual(2, queueAdminProvider.getCallCount('recoverStalled'));
+        }
+    }
+
+    @IsTest
+    static void should_abandon_recovery_events_when_runtime_maintenance_queue_rolls_back() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'maintenance-event-rollback';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, true);
+            Job__c aggregateSource = QueuesTestSupport.job(
+                queueName,
+                QueuesTestSupport.DEFAULT_JOB_NAME,
+                Queues.State.WAITING_CHILDREN.name(),
+                'maintenance-event-rollback-source'
+            );
+            insert aggregateSource;
+            List<AggregateResult> queueNameRows = [
+                SELECT QueueName__c queueName
+                FROM Job__c
+                WHERE Id = :aggregateSource.Id
+                GROUP BY QueueName__c
+            ];
+
+            QueuesDefinitionService definitionStub = (QueuesDefinitionService) Test.createStub(
+                QueuesDefinitionService.class,
+                new QueuesTestSupport.RecordingStubProvider()
+                    .withReturn('findQueueDefinitionAsSystem', queueDefinition)
+                    .withReturn('getLeaseMinutes', 5)
+            );
+            QueuesJobRepository jobRepositoryStub = (QueuesJobRepository) Test.createStub(
+                QueuesJobRepository.class,
+                new QueuesTestSupport.RecordingStubProvider()
+                    .withReturn('queryWaitingChildrenMaintenanceJobQueueNames', queueNameRows)
+                    .withReturn('queryRemovedDependencyMaintenanceJobQueueNames', queueNameRows)
+                    .withReturn('hasStaleWaitingChildrenJob', true)
+                    .withReturn('hasStaleRemovedDependency', true)
+            );
+            QueuesTestSupport.RecordingStubProvider flowProducerProvider = new QueuesTestSupport.RecordingStubProvider()
+                .withReturn('repairStaleParentDependenciesAsSystem', 1)
+                .withException(
+                    'repairStaleRemovedFailureDependenciesAsSystem',
+                    new Queues.QueueException('dependency cleanup exploded')
+                );
+            QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+            QueuesTestSupport.RecordingStubProvider errorEventProvider = new QueuesTestSupport.RecordingStubProvider();
+            QueuesMaintenanceService service = new QueuesMaintenanceService(
+                emptyAsyncApexJobRepositoryStub(),
+                definitionStub,
+                newRecordingErrorService(errorEventProvider),
+                new QueuesQueueAdminService(),
+                emptyRuntimeRepositoryStub(),
+                jobRepositoryStub,
+                emptyScheduleRepositoryStub(),
+                new QueuesInvocableExecutionService(),
+                emptyQueueableDispatchRepositoryStub(),
+                (QueuesFlowProducerService) Test.createStub(QueuesFlowProducerService.class, flowProducerProvider),
+                QueuesTestSupport.newRecordingQueueEventService(queueName, 'RECOVERED', eventProvider)
+            );
+
+            // Act
+            Queues.MaintenanceResult recovered = service.runRuntimeMaintenance();
+
+            // Assert
+            Assert.isFalse(recovered.done);
+            Assert.areEqual(0, recovered.total);
+            Assert.areEqual(1, flowProducerProvider.getCallCount('repairStaleParentDependenciesAsSystem'));
+            Assert.areEqual(1, flowProducerProvider.getCallCount('repairStaleRemovedFailureDependenciesAsSystem'));
+            Assert.areEqual(0, eventProvider.getCallCount('publishQueueEvents'));
+            Assert.areEqual(1, errorEventProvider.getCallCount('publishQueueError'));
         }
     }
 
@@ -131,7 +201,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -205,7 +276,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -271,7 +343,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -326,7 +399,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -366,7 +440,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -440,7 +515,8 @@ private class QueuesMaintenanceServiceTest {
                     invocableProvider
                 ),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -515,7 +591,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -566,7 +643,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -611,7 +689,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             exhaustMaintenanceQueryHeadroom();
@@ -667,7 +746,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -725,7 +805,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -770,7 +851,8 @@ private class QueuesMaintenanceServiceTest {
                 emptyScheduleRepositoryStub(),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             exhaustMaintenanceQueryHeadroom();
@@ -809,7 +891,8 @@ private class QueuesMaintenanceServiceTest {
                 new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesInvocableExecutionService(),
                 emptyQueueableDispatchRepositoryStub(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             leaveMaintenanceQueryHeadroom();
@@ -846,7 +929,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 emptyQueueableDispatchRepositoryStub(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             leaveMaintenanceQueryHeadroom();
@@ -880,7 +964,8 @@ private class QueuesMaintenanceServiceTest {
                 new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesInvocableExecutionService(),
                 emptyQueueableDispatchRepositoryStub(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             leaveMaintenanceQueryHeadroom();
@@ -963,7 +1048,8 @@ private class QueuesMaintenanceServiceTest {
                 scheduleRepositoryStub,
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1026,7 +1112,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1079,7 +1166,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1131,7 +1219,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1187,7 +1276,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1226,7 +1316,8 @@ private class QueuesMaintenanceServiceTest {
                 scheduleRepositoryStub,
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1271,7 +1362,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             exhaustMaintenanceQueryHeadroom();
@@ -1324,7 +1416,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             exhaustMaintenanceQueryHeadroom();
@@ -1383,7 +1476,8 @@ private class QueuesMaintenanceServiceTest {
                 scheduleRepositoryStub,
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1446,7 +1540,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1520,7 +1615,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1593,7 +1689,8 @@ private class QueuesMaintenanceServiceTest {
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -2093,7 +2190,8 @@ private class QueuesMaintenanceServiceTest {
             emptyScheduleRepositoryStub(),
             new QueuesInvocableExecutionService(),
             new QueuesQueueableDispatchRepository(),
-            new QueuesFlowProducerService()
+            new QueuesFlowProducerService(),
+            new QueuesQueueEventService()
         );
     }
 
@@ -2105,6 +2203,16 @@ private class QueuesMaintenanceServiceTest {
                 OccurredAt__c = System.now()
             ),
             false
+        );
+    }
+
+    private static QueuesErrorService newRecordingErrorService(
+        final QueuesTestSupport.RecordingStubProvider eventRepositoryProvider
+    ) {
+        QueuesErrorService.resetEmittedErrorFingerprints();
+        return new QueuesErrorService(
+            new QueuesErrorRepository(),
+            (QueuesErrorEventRepository) Test.createStub(QueuesErrorEventRepository.class, eventRepositoryProvider)
         );
     }
 

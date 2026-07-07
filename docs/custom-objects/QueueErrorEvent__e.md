@@ -1,5 +1,7 @@
 # Queue Error Log
 
+Platform event emitted immediately when the framework records an operational queue error.
+
 ## API Name
 
 `QueueErrorEvent__e`
@@ -11,6 +13,8 @@
 ## Fields
 
 ### Async Apex Job Id
+
+Native AsyncApexJob id associated with the operational error, when available.
 
 **API Name**
 
@@ -26,6 +30,8 @@ _Text_
 
 **Required**
 
+Framework component or path that recorded the operational error.
+
 **API Name**
 
 `Component__c`
@@ -38,6 +44,8 @@ _Text_
 
 ### Job Id
 
+Salesforce Job\_\_c record id associated with the operational error, when available.
+
 **API Name**
 
 `JobId__c`
@@ -49,6 +57,8 @@ _Text_
 ---
 
 ### Message
+
+Error message captured by the framework.
 
 **API Name**
 
@@ -64,6 +74,8 @@ _LongTextArea_
 
 **Required**
 
+Framework timestamp for when the operational error was recorded.
+
 **API Name**
 
 `OccurredAt__c`
@@ -78,6 +90,8 @@ _DateTime_
 
 **Required**
 
+Public queue name associated with the operational error.
+
 **API Name**
 
 `QueueName__c`
@@ -89,6 +103,8 @@ _Text_
 ---
 
 ### Stack Trace
+
+Stack trace captured for the operational error, when available.
 
 **API Name**
 

@@ -504,7 +504,7 @@ private class QueuesQueueableExecutionServiceTest {
             final QueuesJobExecutionService jobExecutionService,
             final QueuesJobService jobService
         ) {
-            super(jobExecutionService, jobService);
+            super(jobExecutionService, jobService, new QueuesQueueEventService());
         }
 
         protected override Id enqueueExecutor(final Id jobId, final Integer delayMinutes) {

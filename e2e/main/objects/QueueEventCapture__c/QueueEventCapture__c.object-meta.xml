@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <allowInChatterGroups>false</allowInChatterGroups>
+    <description>Captures QueueEvent platform events for end-to-end verification.</description>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableLicensing>false</enableLicensing>
+    <enableReports>false</enableReports>
+    <enableSearch>false</enableSearch>
+    <externalSharingModel>Private</externalSharingModel>
+    <label>Queue Event Capture</label>
+    <nameField>
+        <displayFormat>QueueEvent-{00000000}</displayFormat>
+        <label>Queue Event Capture Name</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Queue Event Captures</pluralLabel>
+    <sharingModel>ReadWrite</sharingModel>
+    <visibility>Public</visibility>
+</CustomObject>

@@ -365,6 +365,8 @@ public inherited sharing class Queues {
         private final String status;
 
         /**
+         * Creates a WorkerStatus value.
+         *
          * @param queueName queue this worker serves
          * @param jobId AsyncApexJob id of the current worker, or null when there is none
          * @param status native AsyncApexJob.Status of the worker, or null when there is none
@@ -459,6 +461,8 @@ public inherited sharing class Queues {
         private final String queueName;
 
         /**
+         * Creates a Queue value.
+         *
          * @param queueName public queue name declared in QueueDefinition__mdt
          * @throws QueueException when queueName is blank
          */
@@ -711,8 +715,6 @@ public inherited sharing class Queues {
         }
 
         /**
-         * Returns job counts keyed by every state.
-         *
          * @return map of each State to its job count
          * @throws ConfigurationException when the queue is not configured
          */
@@ -1075,6 +1077,8 @@ public inherited sharing class Queues {
         private final Id jobId;
 
         /**
+         * Creates a Job value.
+         *
          * @param jobId Salesforce Job__c.Id
          * @throws QueueException when jobId is null
          */
@@ -1463,6 +1467,8 @@ public inherited sharing class Queues {
         private List<FlowJob> children = new List<FlowJob>();
 
         /**
+         * Creates a FlowJob value.
+         *
          * @param name display name of the job
          * @param queueName queue this node belongs to
          * @param processor allowlisted processor class name
@@ -1584,6 +1590,9 @@ public inherited sharing class Queues {
      * new Queues.RepeatOptions().pattern('0 0 2 * * ?');
      */
     public class RepeatOptions {
+        private final String INVALID_EVERY_MINUTES_MESSAGE = 'minutes must be greater than 0';
+        private final String INVALID_LIMIT_MESSAGE = 'limit must be greater than 0';
+
         private Integer everyMinutes;
         private String pattern;
         private Integer limitCount;
@@ -1609,7 +1618,7 @@ public inherited sharing class Queues {
          * @throws QueueException when minutes is not greater than 0
          */
         public RepeatOptions everyMinutes(final Integer minutes) {
-            QueuesSupport.isTrue(minutes > 0, new QueueException('minutes must be greater than 0'));
+            QueuesSupport.isTrue(minutes > 0, new QueueException(INVALID_EVERY_MINUTES_MESSAGE));
             everyMinutes = minutes;
             return this;
         }
@@ -1637,10 +1646,7 @@ public inherited sharing class Queues {
          * @throws QueueException when limitCount is non-null and not greater than 0
          */
         public RepeatOptions lim(final Integer limitCount) {
-            QueuesSupport.isTrue(
-                limitCount == null || limitCount > 0,
-                new QueueException('limit must be greater than 0')
-            );
+            QueuesSupport.isTrue(limitCount == null || limitCount > 0, new QueueException(INVALID_LIMIT_MESSAGE));
             this.limitCount = limitCount;
             return this;
         }
@@ -1970,6 +1976,13 @@ public inherited sharing class Queues {
      *     .backoff(Queues.Backoff.FIXED, 5, 0.25);
      */
     public class JobOptions {
+        private final String INVALID_ATTEMPTS_MESSAGE = 'attempts must be greater than 0';
+        private final String INVALID_DELAY_MESSAGE = 'delay must be zero or greater';
+        private final String INVALID_DIMENSION_LENGTH_MESSAGE = '{0} must be {1} characters or fewer';
+        private final String INVALID_JITTER_MESSAGE = 'jitter must be between 0 and 1';
+        private final String INVALID_JITTER_WITHOUT_BACKOFF_MESSAGE = 'jitter requires a backoff strategy';
+        private final String INVALID_PRIORITY_MESSAGE = 'priority must be zero or greater';
+
         private String jobId;
         private String category;
         private String groupKey;
@@ -2043,7 +2056,7 @@ public inherited sharing class Queues {
          * @throws QueueException when attempts is not greater than 0
          */
         public JobOptions attempts(final Integer attempts) {
-            QueuesSupport.isTrue(attempts > 0, new QueueException('attempts must be greater than 0'));
+            QueuesSupport.isTrue(attempts > 0, new QueueException(INVALID_ATTEMPTS_MESSAGE));
             this.attempts = attempts;
             return this;
         }
@@ -2057,7 +2070,7 @@ public inherited sharing class Queues {
          * @throws QueueException when priority is negative
          */
         public JobOptions priority(final Integer priority) {
-            QueuesSupport.isTrue(priority >= 0, new QueueException('priority must be zero or greater'));
+            QueuesSupport.isTrue(priority >= 0, new QueueException(INVALID_PRIORITY_MESSAGE));
             this.priority = priority;
             return this;
         }
@@ -2070,7 +2083,7 @@ public inherited sharing class Queues {
          * @throws QueueException when delay is negative
          */
         public JobOptions delay(final Integer delay) {
-            QueuesSupport.isTrue(delay >= 0, new QueueException('delay must be zero or greater'));
+            QueuesSupport.isTrue(delay >= 0, new QueueException(INVALID_DELAY_MESSAGE));
             this.delay = delay;
             return this;
         }
@@ -2113,15 +2126,15 @@ public inherited sharing class Queues {
          */
         public JobOptions backoff(final Backoff type, final Integer delay, final Decimal jitter) {
             QueuesSupport.notNull(type, 'type');
-            QueuesSupport.isTrue(delay >= 0, new QueueException('delay must be zero or greater'));
+            QueuesSupport.isTrue(delay >= 0, new QueueException(INVALID_DELAY_MESSAGE));
             Decimal resolvedJitter = jitter ?? 0;
             QueuesSupport.isTrue(
                 resolvedJitter >= 0 && resolvedJitter <= 1,
-                new QueueException('jitter must be between 0 and 1')
+                new QueueException(INVALID_JITTER_MESSAGE)
             );
             QueuesSupport.isTrue(
                 type != Backoff.NONE || resolvedJitter == 0,
-                new QueueException('jitter requires a backoff strategy')
+                new QueueException(INVALID_JITTER_WITHOUT_BACKOFF_MESSAGE)
             );
             backoffType = type;
             backoffValue = type == Backoff.NONE ? 0 : delay;
@@ -2319,7 +2332,9 @@ public inherited sharing class Queues {
             QueuesSupport.notBlank(value, argName);
             QueuesSupport.isTrue(
                 value.length() <= maxLength,
-                new QueueException(argName + ' must be ' + maxLength + ' characters or fewer')
+                new QueueException(
+                    String.format(INVALID_DIMENSION_LENGTH_MESSAGE, new List<Object>{ argName, maxLength })
+                )
             );
             return value;
         }
@@ -2557,8 +2572,6 @@ public inherited sharing class Queues {
         }
 
         /**
-         * Returns the current attempt number, counting this attempt: the first attempt sees `1`.
-         *
          * @return current attempt number, including this attempt
          */
         public Integer attemptsMade() {
@@ -2656,6 +2669,8 @@ public inherited sharing class Queues {
      *     .withProgress(new Map<String, Object>{ 'step' => 'waiting-for-ledger' });
      */
     public class ProcessResult {
+        private final String INVALID_DELAY_MESSAGE = 'delay must be zero or greater';
+
         private final Outcome outcome;
         private String checkpointJson;
         private String progressJson;
@@ -2720,7 +2735,7 @@ public inherited sharing class Queues {
          * @throws QueueException when delay is negative
          */
         public ProcessResult withDelay(final Integer delay) {
-            QueuesSupport.isTrue(delay >= 0, new QueueException('delay must be zero or greater'));
+            QueuesSupport.isTrue(delay >= 0, new QueueException(INVALID_DELAY_MESSAGE));
             this.delay = delay;
             return this;
         }
@@ -2916,8 +2931,6 @@ public inherited sharing class Queues {
         }
 
         /**
-         * Returns job counts keyed by every state.
-         *
          * @return map of each State to its job count
          */
         public Map<State, Integer> asJobCounts() {

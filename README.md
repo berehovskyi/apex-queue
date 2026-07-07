@@ -16,55 +16,56 @@ async artifacts as wake or handoff mechanisms instead of the source of truth.
     - [Configuration](#configuration)
 - [Quick Start](#quick-start)
 - [Features](#features)
-- [Usage](#usage)
-    - [Queue](#queue)
-        - [Queue Settings](#queue-settings)
-        - [Adding a Job](#adding-a-job)
-        - [Adding Jobs in Bulk](#adding-jobs-in-bulk)
-        - [Bulk Options](#bulk-options)
-        - [Operating the Queue](#operating-the-queue)
-    - [Workers](#workers)
-        - [Execution Modes](#execution-modes)
-        - [Worker Priority](#worker-priority)
-    - [Processors](#processors)
-        - [Processor Settings](#processor-settings)
-        - [Processor Retrying](#processor-retrying)
-            - [Stop Processor Retrying](#stop-processor-retrying)
-        - [Error Handling](#error-handling)
-    - [Job](#job)
-        - [Job IDs](#job-ids)
-        - [Idempotent Job IDs](#idempotent-job-ids)
-        - [Job Data](#job-data)
-        - [Progress](#progress)
-        - [Job Options](#job-options)
-        - [Delayed Jobs](#delayed-jobs)
-        - [Prioritized Jobs](#prioritized-jobs)
-        - [Pausing, Resuming, and Checkpoints](#pausing-resuming-and-checkpoints)
-        - [Retrying](#retrying)
-            - [Stop Retrying](#stop-retrying)
-            - [Manual Retrying](#manual-retrying)
-        - [Removing and Canceling](#removing-and-canceling)
-        - [Stalled Jobs](#stalled-jobs)
-        - [Getters](#getters)
-    - [Job Scheduler](#job-scheduler)
-        - [Repeat Strategies](#repeat-strategies)
-        - [Repeat Options](#repeat-options)
-        - [Job Template](#job-template)
-            - [Template Job Options](#template-job-options)
-        - [Manage Job Schedulers](#manage-job-schedulers)
-    - [Flows](#flows)
-        - [Adding Flows](#adding-flows)
-        - [Get Flow Tree](#get-flow-tree)
-        - [Dependency Policies](#dependency-policies)
-    - [Maintenance](#maintenance)
-        - [Recovery](#recovery)
-        - [Job Retention Policy](#job-retention-policy)
-        - [Schedule Maintenance](#schedule-maintenance)
-        - [Run Maintenance Manually](#run-maintenance-manually)
-    - [Metrics](#metrics)
-        - [Operational Errors](#operational-errors)
-    - [Concurrency and Parallelism](#concurrency-and-parallelism)
-        - [Creating Parallelism](#creating-parallelism)
+- [What Is a Job Queue?](#what-is-a-job-queue)
+- [Queue](#queue)
+    - [Queue Settings](#queue-settings)
+    - [Adding a Job](#adding-a-job)
+    - [Adding Jobs in Bulk](#adding-jobs-in-bulk)
+    - [Bulk Options](#bulk-options)
+    - [Operating the Queue](#operating-the-queue)
+- [Workers](#workers)
+    - [Execution Modes](#execution-modes)
+    - [Worker Priority](#worker-priority)
+- [Processors](#processors)
+    - [Processor Settings](#processor-settings)
+    - [Processor Retrying](#processor-retrying)
+        - [Stop Processor Retrying](#stop-processor-retrying)
+    - [Error Handling](#error-handling)
+- [Job](#job)
+    - [Job IDs](#job-ids)
+    - [Idempotent Job IDs](#idempotent-job-ids)
+    - [Job Data](#job-data)
+    - [Progress](#progress)
+    - [Job Options](#job-options)
+    - [Delayed Jobs](#delayed-jobs)
+    - [Prioritized Jobs](#prioritized-jobs)
+    - [Pausing, Resuming, and Checkpoints](#pausing-resuming-and-checkpoints)
+    - [Retrying](#retrying)
+        - [Stop Retrying](#stop-retrying)
+        - [Manual Retrying](#manual-retrying)
+    - [Removing and Canceling](#removing-and-canceling)
+    - [Stalled Jobs](#stalled-jobs)
+    - [Getters](#getters)
+- [Job Scheduler](#job-scheduler)
+    - [Repeat Strategies](#repeat-strategies)
+    - [Repeat Options](#repeat-options)
+    - [Job Template](#job-template)
+        - [Template Job Options](#template-job-options)
+    - [Manage Job Schedulers](#manage-job-schedulers)
+- [Flows](#flows)
+    - [Adding Flows](#adding-flows)
+    - [Get Flow Tree](#get-flow-tree)
+    - [Dependency Policies](#dependency-policies)
+- [Maintenance](#maintenance)
+    - [Recovery](#recovery)
+    - [Job Retention Policy](#job-retention-policy)
+    - [Schedule Maintenance](#schedule-maintenance)
+    - [Run Maintenance Manually](#run-maintenance-manually)
+- [Metrics](#metrics)
+    - [Queue Events](#queue-events)
+    - [Operational Errors](#operational-errors)
+- [Concurrency and Parallelism](#concurrency-and-parallelism)
+    - [Creating Parallelism](#creating-parallelism)
 - [Architecture](#architecture)
     - [Durable State](#durable-state)
     - [Recovery Model](#recovery-model)
@@ -83,7 +84,7 @@ sf project deploy start -d sfdx-source/apex-queue -o <org-alias>
 or install as an Unlocked Package:
 
 ```sh pkg::apex-queue
-sf package install -p 04tJ5000000DA2tIAG -o <org-alias> -r -w 10
+sf package install -p 04tfj000000MNijAAG -o <org-alias> -r -w 10
 ```
 
 Assign one of the packaged permission sets to users who need framework access:
@@ -188,10 +189,49 @@ BullMQ-inspired API.
   retries and replays do not double-enqueue the same logical job.
 - **Observable** — per-attempt history, durable failure reasons, queue stats, and
   job counts by state out of the box.
+- **Optional queue events** — publish selected `QueueEvent__e` lifecycle signals
+  for integrations that should react to queue activity.
 
-## Usage
+## What Is a Job Queue?
 
-### Queue
+A job queue stores work now and executes it later in a separate transaction.
+Instead of doing slow, fragile, or limit-heavy work inside the caller's
+transaction, your code enqueues a durable `Job__c` record and a processor picks
+it up when Salesforce async capacity is available.
+
+```mermaid
+flowchart LR
+    caller["Caller transaction<br/>Apex, Flow, or UI action"]
+    enqueue["Enqueue job<br/>Queues.of(...).add(...)"]
+    job["Durable Job__c<br/>source of truth"]
+    wake["Async wake or handoff<br/>worker, queueable, invocable"]
+    processor["Processor transaction<br/>process(ctx)"]
+    run["JobRun__c<br/>attempt history"]
+    done["COMPLETED"]
+    retry["Retry later<br/>AvailableAt__c + backoff"]
+    failed["FAILED / CANCELED"]
+    maintenance["Maintenance<br/>recover, repair, cleanup"]
+
+    caller --> enqueue --> job
+    job --> wake --> processor --> run
+    processor --> done
+    processor --> retry --> job
+    processor --> failed
+    maintenance --> job
+```
+
+Use a job queue when work should survive retries, rollbacks, async handoff failures,
+record locks, or temporary downstream outages. Good fits include callouts,
+document generation, sync jobs, scheduled work, bulk fan-out, dependency graphs,
+and any process where operators need to inspect, retry, cancel, or recover work.
+
+A job queue is not a replacement for every async call. Prefer direct Apex, Flow, or
+native async when the work is tiny, does not need durable inspection, and a lost
+handoff is acceptable. Prefer purpose-built Salesforce features for large data
+loads, CDC-style replication, or user interactions that must return a result
+immediately.
+
+## Queue
 
 A queue is a named stream of durable jobs. Use `Queues.of(queueName)` to create a
 lightweight queue handle:
@@ -203,7 +243,7 @@ Queues.Queue queue = Queues.of('invoice-sync');
 The queue must exist as an active `QueueDefinition__mdt` record before jobs can
 be added.
 
-#### Queue Settings
+### Queue Settings
 
 `QueueDefinition__mdt` declares a queue. The record also holds the queue's
 default retry, backoff, lease, and claim policy, which individual jobs may
@@ -211,23 +251,24 @@ override.
 
 Create a `QueueDefinition__mdt` record for every queue name you want to use:
 
-| Field                                            | Default | Purpose                                          |
-| ------------------------------------------------ | ------- | ------------------------------------------------ |
-| `QueueName__c`<span style="color: red">\*</span> | -       | Public queue name used in `Queues.of(...)`.      |
-| `Description__c`                                 | -       | Optional admin-facing queue description.         |
-| `IsActive__c`                                    | `false` | Whether new work can be added to the queue.      |
-| `DefaultAttempts__c`                             | `1`     | Attempts used when a job does not override them. |
-| `DefaultBackoffType__c`                          | `NONE`  | Default retry backoff strategy.                  |
-| `DefaultBackoffValue__c`                         | `0`     | Default retry backoff value in minutes.          |
-| `DefaultBackoffJitter__c`                        | `0`     | Default retry jitter ratio from `0` to `1`.      |
-| `DefaultLeaseMinutes__c`                         | `5`     | Lease age before active work can be recovered.   |
-| `BatchClaimSize__c`                              | `1`     | Worker claim size for `WORKER` jobs.             |
-| `TerminalCleanupPolicy__c`                       | `KEEP`  | Terminal job cleanup policy: `KEEP` or `DELETE`. |
-| `CompletedRetentionDays__c`                      | -       | Days to keep `COMPLETED` jobs when deleting.     |
-| `FailedRetentionDays__c`                         | -       | Days to keep `FAILED` jobs when deleting.        |
-| `CanceledRetentionDays__c`                       | -       | Days to keep `CANCELED` jobs when deleting.      |
+| Field                                            | Default | Purpose                                              |
+| ------------------------------------------------ | ------- | ---------------------------------------------------- |
+| `QueueName__c`<span style="color: red">\*</span> | -       | Public queue name used in `Queues.of(...)`.          |
+| `Description__c`                                 | -       | Optional admin-facing queue description.             |
+| `IsActive__c`                                    | `false` | Whether new work can be added to the queue.          |
+| `DefaultAttempts__c`                             | `1`     | Attempts used when a job does not override them.     |
+| `DefaultBackoffType__c`                          | `NONE`  | Default retry backoff strategy.                      |
+| `DefaultBackoffValue__c`                         | `0`     | Default retry backoff value in minutes.              |
+| `DefaultBackoffJitter__c`                        | `0`     | Default retry jitter ratio from `0` to `1`.          |
+| `DefaultLeaseMinutes__c`                         | `5`     | Lease age before active work can be recovered.       |
+| `BatchClaimSize__c`                              | `1`     | Worker claim size for `WORKER` jobs.                 |
+| `TerminalCleanupPolicy__c`                       | `KEEP`  | Terminal job cleanup policy: `KEEP` or `DELETE`.     |
+| `CompletedRetentionDays__c`                      | -       | Days to keep `COMPLETED` jobs when deleting.         |
+| `FailedRetentionDays__c`                         | -       | Days to keep `FAILED` jobs when deleting.            |
+| `CanceledRetentionDays__c`                       | -       | Days to keep `CANCELED` jobs when deleting.          |
+| `PublishedEventTypes__c`                         | -       | Semicolon-separated `QueueEvent__e` types, or `ALL`. |
 
-#### Adding a Job
+### Adding a Job
 
 The most common operation is adding a job to a queue:
 
@@ -242,7 +283,7 @@ Queues.Job job = Queues.of('invoice-sync').add(
 The first argument is the job name, the second is the processor class name, and
 the third is JSON-serializable job data.
 
-#### Adding Jobs in Bulk
+### Adding Jobs in Bulk
 
 Use `addBulk(...)` when the request should insert several jobs atomically:
 
@@ -269,7 +310,7 @@ If one job in the bulk request cannot be inserted, the whole request rolls back.
 > `addBulk(...)` is atomic. Salesforce governor limits still bound the size of a
 > single request.
 
-#### Bulk Options
+### Bulk Options
 
 `BulkJobOptions` controls the [execution mode](#execution-modes) for a bulk
 request. `WORKER` is the default:
@@ -298,7 +339,7 @@ idempotency.
 > Do not use the dispatcher key as protection against processing a durable job
 > twice.
 
-#### Operating the Queue
+### Operating the Queue
 
 Queue handles expose the common admin operations:
 
@@ -323,12 +364,12 @@ and cascades their `JobRun__c` records through master-detail.
 > `drain()` is destructive and removes attempt history. Use `cancel()` when the
 > durable records must remain available for inspection.
 
-### Workers
+## Workers
 
 Workers are framework-owned transports. The execution mode selects which
 Salesforce runtime will call the processor.
 
-#### Execution Modes
+### Execution Modes
 
 | Mode                   | Runtime                | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ---------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -349,7 +390,7 @@ invocable transaction traits.
 > batch, queueable, and future daily allocations matter more than immediate
 > start latency.
 
-#### Worker Priority
+### Worker Priority
 
 Worker-mode queues use Batch Apex. When the current worker is waiting in
 Salesforce's Flex Queue, it can be moved to the front or end:
@@ -378,9 +419,9 @@ the Flex Queue, or another transaction wins the race.
 > This API does not expose the org-wide Flex Queue or arbitrary Batch Apex jobs.
 > Queueable and invocable execution modes do not use the Flex Queue.
 
-### Processors
+## Processors
 
-#### Processor Settings
+### Processor Settings
 
 `Processor__mdt` registers an Apex class the framework is allowed to run as a
 job processor. Enqueuing fails with a `ConfigurationException` unless a
@@ -446,7 +487,7 @@ return ctx.pause(checkpoint);
 return ctx.defer(checkpoint, 5);
 ```
 
-#### Processor Retrying
+### Processor Retrying
 
 Processor retrying starts when an attempt fails normally:
 
@@ -455,7 +496,7 @@ Processor retrying starts when an attempt fails normally:
 - A regular exception thrown by `process(ctx)` is caught by the framework and
   handled the same way: failed attempt, retry if attempts remain.
 
-##### Stop Processor Retrying
+#### Stop Processor Retrying
 
 Throw `Queues.UnrecoverableJobException` when a processor detects a permanent
 failure and the job should not retry:
@@ -471,7 +512,7 @@ attempts.
 > Use `UnrecoverableJobException` only for permanent failures. It bypasses every
 > remaining automatic retry.
 
-#### Error Handling
+### Error Handling
 
 Catastrophic async failure is different from a normal processor failure. It
 means the Salesforce transaction died before normal finalization could
@@ -501,7 +542,7 @@ Processor failures are job attempt failures, not `QueueError__c` records. Use
 `JobRun__c`, `Job__c.FailedReason__c`, and final job state to inspect them.
 `QueueError__c` is for framework operational failures.
 
-### Job
+## Job
 
 `Queues.Job` is a lightweight handle around a durable `Job__c` record:
 
@@ -517,7 +558,7 @@ Queues.Job job = Queues.job(jobId);
 Queues.State state = job.getState();
 ```
 
-#### Job IDs
+### Job IDs
 
 `Queues.Job.getId()` returns the Salesforce `Job__c.Id`. Use this record id
 when operating on an existing durable job:
@@ -536,7 +577,7 @@ In this guide, `jobId` means the Salesforce `Job__c.Id` unless it refers to the
 > `Queues.Job.getId()` returns a Salesforce record id. `JobOptions.jobId(...)`
 > accepts a caller-owned, queue-scoped idempotency key.
 
-#### Idempotent Job IDs
+### Idempotent Job IDs
 
 `JobOptions.jobId(...)` sets a caller-owned, queue-scoped idempotency key:
 
@@ -553,7 +594,7 @@ If the same queue receives the same `jobId(...)` again, the framework
 reconciles the duplicate at the database boundary and returns the existing job.
 The same id can be reused in a different queue.
 
-#### Job Data
+### Job Data
 
 Job data is serialized into `Job__c.Data__c` and deserialized through
 `ctx.data()`:
@@ -571,7 +612,7 @@ Non-active jobs can update data before the next execution:
 Queues.job(jobId).updateData(new Map<String, Object>{ 'force' => false });
 ```
 
-#### Progress
+### Progress
 
 Processors can persist progress with a non-terminal result:
 
@@ -600,7 +641,7 @@ Non-active jobs can also update progress through the job handle:
 Queues.job(jobId).updateProgress(new Map<String, Object>{ 'step' => 'review' });
 ```
 
-#### Job Options
+### Job Options
 
 Common job options are chainable:
 
@@ -619,7 +660,7 @@ Queue metadata supplies defaults when an option is not provided.
 `Job__c` fields for SOQL lookups. Use them for operational lookup dimensions;
 `Data__c` is payload, not a query model.
 
-#### Delayed Jobs
+### Delayed Jobs
 
 Use `delay(minutes)` for a relative delay:
 
@@ -648,7 +689,7 @@ queue is woken if needed:
 Queues.job(jobId).promote();
 ```
 
-#### Prioritized Jobs
+### Prioritized Jobs
 
 Lower `priority(...)` values are claimed before higher values when jobs are
 otherwise due:
@@ -670,7 +711,7 @@ execution order.
 > Salesforce controls native async execution after the framework dispatches a
 > job, so priority cannot guarantee start or completion order.
 
-#### Pausing, Resuming, and Checkpoints
+### Pausing, Resuming, and Checkpoints
 
 Pause a job directly:
 
@@ -700,7 +741,7 @@ Resume a paused job when it should become runnable again:
 Queues.job(jobId).resume();
 ```
 
-#### Retrying
+### Retrying
 
 Handled failures retry until attempts are exhausted:
 
@@ -732,7 +773,7 @@ same scheduler or worker sweep.
 Queueable retry backoff is capped at 10 minutes by Salesforce's native
 queueable delay limit. `WORKER` retry delays are not framework-capped.
 
-##### Stop Retrying
+#### Stop Retrying
 
 Throw `Queues.UnrecoverableJobException` to fail a job without another retry:
 
@@ -746,7 +787,7 @@ Use `discard()` to stop future retries for a non-active job:
 Queues.job(jobId).discard();
 ```
 
-##### Manual Retrying
+#### Manual Retrying
 
 Retry a failed job manually with:
 
@@ -756,7 +797,7 @@ Queues.job(jobId).retry();
 
 Manual retry resets attempt state and moves the job back to runnable work.
 
-#### Removing and Canceling
+### Removing and Canceling
 
 Use `cancel()` when observability matters:
 
@@ -774,7 +815,7 @@ Queues.job(jobId).remove();
 > `remove()` permanently deletes the job and cascades its `JobRun__c` attempt
 > history. This cannot be replaced by later maintenance.
 
-#### Stalled Jobs
+### Stalled Jobs
 
 A job is considered stale when its active lease expires before completion.
 Maintenance can recover stalled work by retrying it or failing it when attempts
@@ -786,7 +827,7 @@ You can also recover one queue explicitly:
 Integer recovered = Queues.of('invoice-sync').recoverStalled();
 ```
 
-#### Getters
+### Getters
 
 Job handles expose state helpers:
 
@@ -805,12 +846,12 @@ Boolean isWaitingChildren = job.isWaitingChildren();
 
 Use queue stats for aggregate counts.
 
-### Job Scheduler
+## Job Scheduler
 
 A job scheduler is a `Schedulable` materializer. It creates `Job__c` rows from a
 template; it does not execute processors itself.
 
-#### Repeat Strategies
+### Repeat Strategies
 
 Use `pattern(...)` for Salesforce cron expressions:
 
@@ -835,7 +876,7 @@ Queues.Job firstJob = Queues.of('invoice-sync').upsertJobScheduler(
 `every(minutes)` schedulers use one-shot Scheduled Apex wakes and self-reschedule from
 durable scheduler state.
 
-#### Repeat Options
+### Repeat Options
 
 `RepeatOptions` supports:
 
@@ -849,7 +890,7 @@ new Queues.RepeatOptions()
 
 `lim(count)` caps lifetime materializations for that scheduler identity.
 
-#### Job Template
+### Job Template
 
 The repeat options decide when a scheduler materializes work. `JobTemplate`
 decides what job is materialized:
@@ -862,7 +903,7 @@ new Queues.JobTemplate('sync-invoice', 'InvoiceSyncProcessor')
 The constructor values are the generated job name and processor. Use
 `data(...)` for the generated job payload.
 
-##### Template Job Options
+#### Template Job Options
 
 Use `opts(...)` to apply normal job options to every materialized occurrence:
 
@@ -880,7 +921,7 @@ Template options may set attempts, priority, parent provenance, backoff, and
 other execution behavior. They may not set `jobId(...)`, `delay(...)`, or
 `availableAt(...)`; the scheduler owns occurrence ids and timing.
 
-#### Manage Job Schedulers
+### Manage Job Schedulers
 
 `upsertJobScheduler(...)` creates or replaces the scheduler with the same
 queue-scoped scheduler id:
@@ -923,12 +964,12 @@ Queues.of('invoice-sync').removeJobScheduler('invoice-sync-every-15');
 > Removing a scheduler deletes its linked jobs and their cascaded attempt
 > history. Cancel the scheduler when observability must be preserved.
 
-### Flows
+## Flows
 
 `FlowProducer` inserts dependency graphs atomically. Parents wait in
 `WAITING_CHILDREN` until their children resolve.
 
-#### Adding Flows
+### Adding Flows
 
 ```apex
 Queues.JobNode root = Queues.flowProducer().add(
@@ -964,7 +1005,7 @@ Queues.flowProducer().add(
 );
 ```
 
-#### Get Flow Tree
+### Get Flow Tree
 
 `add(...)` returns a `JobNode` tree containing the durable jobs created by the
 request. Later, use `getFlow(jobId)` to read the complete durable tree again:
@@ -987,7 +1028,7 @@ private static void renderFlow(final Queues.JobNode node) {
 complete tree visible to the current user. Each node contains a `Queues.Job`
 handle plus child nodes.
 
-#### Dependency Policies
+### Dependency Policies
 
 By default, failed or canceled children keep the parent in `WAITING_CHILDREN`.
 Opt into explicit edge behavior on the child job options:
@@ -1022,9 +1063,9 @@ Cancellation policies:
 `opts.parent(...)` is not accepted inside submitted flow graphs. Define
 dependencies with `child(...)`.
 
-### Maintenance
+## Maintenance
 
-#### Recovery
+### Recovery
 
 The framework recovers from stale durable state, not from assumptions about
 native async visibility. Recovery includes:
@@ -1035,7 +1076,7 @@ native async visibility. Recovery includes:
 - stale `WAITING_CHILDREN` dependency parents,
 - orphaned worker and scheduler native artifacts.
 
-#### Job Retention Policy
+### Job Retention Policy
 
 Terminal jobs are kept by default. Set `TerminalCleanupPolicy__c` to `DELETE`
 on a `QueueDefinition__mdt` record when terminal jobs should be removed by
@@ -1064,7 +1105,7 @@ deleted.
 > from `Queues.runTerminalCleanupMaintenance()`, not at the moment a job
 > completes.
 
-#### Schedule Maintenance
+### Schedule Maintenance
 
 Schedule maintenance once per org when you want automatic recovery:
 
@@ -1104,7 +1145,7 @@ Until maintenance is scheduled, stalled-job recovery, queueable dispatch
 recovery, dependency repair, scheduler maintenance, and terminal cleanup do not
 run automatically.
 
-#### Run Maintenance Manually
+### Run Maintenance Manually
 
 Run maintenance manually when you need immediate org-level recovery or cleanup
 instead of waiting for the scheduled maintenance job:
@@ -1133,7 +1174,7 @@ to preserve governor-limit headroom; run it again to continue.
 > For immediate repair, run runtime maintenance first and repeat any phase
 > while its result has `done == false`.
 
-### Metrics
+## Metrics
 
 Queues expose job counts by state for a queue:
 
@@ -1152,7 +1193,41 @@ Integer waiting = Queues.of('invoice-sync').getWaitingCount();
 Map<Queues.State, Integer> counts = Queues.of('invoice-sync').getJobCounts();
 ```
 
-#### Operational Errors
+### Queue Events
+
+Queues can publish optional `QueueEvent__e` platform events after commit. Leave
+`PublishedEventTypes__c` blank to disable events for a queue, set it to `ALL`,
+or provide a semicolon-separated list of event types.
+
+| Type                     | Meaning                                             |
+| ------------------------ | --------------------------------------------------- |
+| `ACTIVE`                 | A job was claimed or handed off by a transport.     |
+| `COMPLETED`              | A job reached `COMPLETED`.                          |
+| `FAILED`                 | A job reached terminal `FAILED`.                    |
+| `CANCELED`               | A job was canceled.                                 |
+| `STALLED`                | Recovery marked a stalled job as terminal `FAILED`. |
+| `RECOVERED`              | Recovery repaired jobs or an aggregate queue issue. |
+| `SCHEDULER_MATERIALIZED` | A job scheduler materialized a `Job__c` occurrence. |
+| `CLEANED`                | Maintenance deleted expired terminal jobs.          |
+
+`ACTIVE` does not guarantee the processor is currently executing; queueable jobs
+can be handed off to Salesforce async before their processor transaction starts.
+`RECOVERED` can be per-job (`JobId__c` populated) or aggregate
+(`JobCount__c` and `Component__c` populated). When stalled recovery exhausts a
+job's attempts, the job can emit both `STALLED` and `FAILED` if both types are
+enabled.
+
+> [!IMPORTANT]
+> Treat `QueueEvent__e` as at-least-once telemetry, not the source of truth. Use
+> `EventUuid` as the event dedupe key, do not rely on cross-transaction ordering,
+> and reconcile against `Job__c` / `JobRun__c` when correctness matters. One
+> transaction's events may be split across trigger batches, and one trigger batch
+> may contain events from multiple transactions.
+
+Event publishing is best-effort: invalid event configuration or publish failures
+are recorded as queue errors and do not block job processing.
+
+### Operational Errors
 
 `QueueError__c` records framework operational failures: worker scheduling,
 queueable dispatch, invocable enqueue, scheduler maintenance, runtime
@@ -1166,7 +1241,7 @@ Framework error telemetry is usually published through `QueueErrorEvent__e` and
 persisted asynchronously into `QueueError__c`, so operational logging does not
 pollute normal processor execution transactions.
 
-### Concurrency and Parallelism
+## Concurrency and Parallelism
 
 Concurrency and parallelism describe different properties:
 
@@ -1185,7 +1260,7 @@ turns, or wait behind other org workloads.
 | `QUEUEABLE_CONCURRENT` | **Concurrent submission.** The dispatcher submits independent executors aggressively, using future bridges where needed.                  | **One job per submission.** Each submitted executor independently receives durable `ACTIVE` ownership of one job.  | **Concurrent execution.** Independent queueable transactions can overlap, while Salesforce controls actual parallelism.                                   |
 | `INVOCABLE`            | **Independent scheduled dispatch.** Flow Scheduled Paths wake due jobs for the Claim Flow.                                                | **Bulk claim.** The Claim Flow locks and leases up to `100` jobs per transaction.                                  | **Concurrent execution.** The Execute Flow receives one `ACTIVE` job per clean `INVOCABLE_ACTION` transaction; transactions can overlap.                  |
 
-#### Creating Parallelism
+### Creating Parallelism
 
 True parallelism exists only when processor transactions execute at the same
 instant. Apex Queue creates independent concurrent work, but Salesforce controls

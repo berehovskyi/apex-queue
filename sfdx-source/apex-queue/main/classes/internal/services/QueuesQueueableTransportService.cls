@@ -107,7 +107,7 @@ public abstract inherited sharing class QueuesQueueableTransportService {
     // <editor-fold desc="Helpers">
     @TestVisible
     private static String nativeQueueableDelayMessage(final Integer delayMinutes) {
-        return String.format(NATIVE_INVALID_QUEUEABLE_DELAY_MESSAGE, new List<String>{ delayMinutes?.toString() });
+        return String.format(NATIVE_INVALID_QUEUEABLE_DELAY_MESSAGE, new List<Integer>{ delayMinutes });
     }
 
     // </editor-fold>
