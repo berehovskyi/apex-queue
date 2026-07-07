@@ -7,13 +7,13 @@
  */
 @SuppressWarnings('PMD.ApexDoc')
 public virtual inherited sharing class QueuesQueueableExecutionService extends QueuesQueueableTransportService {
-    private static final String QUEUEABLE_RETRY_ENQUEUE_FAILED_MESSAGE = 'Queueable retry enqueue failed: {0}';
     private static final Set<Queues.State> RUNNABLE_JOB_STATES = new Set<Queues.State>{
         Queues.State.WAITING,
         Queues.State.DELAYED
     };
     private QueuesJobExecutionService jobExecutionService = new QueuesJobExecutionService();
     private QueuesJobService jobService = new QueuesJobService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesQueueableExecutionService() {
     }
@@ -21,10 +21,12 @@ public virtual inherited sharing class QueuesQueueableExecutionService extends Q
     @TestVisible
     protected QueuesQueueableExecutionService(
         final QueuesJobExecutionService jobExecutionService,
-        final QueuesJobService jobService
+        final QueuesJobService jobService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.jobExecutionService = jobExecutionService;
         this.jobService = jobService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Future Bridges">
@@ -116,7 +118,9 @@ public virtual inherited sharing class QueuesQueueableExecutionService extends Q
         }
         markQueueableExecutorSubmitted(currentJob, submission);
         currentJob.QueueableDispatchInitiatedAt__c = now;
-        return jobService.updateJobAsSystem(currentJob);
+        Job__c updatedJob = jobService.updateJobAsSystem(currentJob);
+        queueEventService.publishActiveJobEvents(new List<Job__c>{ updatedJob });
+        return updatedJob;
     }
 
     private Job__c bridgeNextAttemptFromFuture(final Job__c currentJob, final Datetime now) {
@@ -133,10 +137,7 @@ public virtual inherited sharing class QueuesQueueableExecutionService extends Q
     private Job__c failRetryEnqueue(final Job__c currentJob, final Datetime now, final Exception ex) {
         markQueueableSubmissionFailed(
             currentJob,
-            String.format(
-                QUEUEABLE_RETRY_ENQUEUE_FAILED_MESSAGE,
-                new List<String>{ QueuesSupport.resolveExceptionReason(ex) }
-            ),
+            'Queueable retry enqueue failed: ' + QueuesSupport.resolveExceptionReason(ex),
             now
         );
         return jobService.updateJobAsSystem(currentJob);

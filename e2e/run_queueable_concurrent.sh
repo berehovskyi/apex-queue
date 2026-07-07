@@ -15,15 +15,12 @@ run_apex "$E2E_TEST_ROOT/queueable_concurrent/05_should_dedupe_queueable_dispatc
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/00_cleanup.apex"
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/10_should_enqueue_queueable_smoke.apex"
-wait_for_async 5
-run_apex "$E2E_TEST_ROOT/queueable_concurrent/20_should_assert_queueable_smoke_completed.apex"
+run_apex_until_success "$E2E_TEST_ROOT/queueable_concurrent/20_should_assert_queueable_smoke_completed.apex" 120 5
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/30_should_enqueue_retryable_queueable_job.apex"
-wait_for_async 5
-run_apex "$E2E_TEST_ROOT/queueable_concurrent/31_should_assert_retryable_queueable_job_failed.apex"
+run_apex_until_success "$E2E_TEST_ROOT/queueable_concurrent/31_should_assert_retryable_queueable_job_failed.apex" 120 5
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/70_should_enqueue_retryable_queueable_job_with_ten_attempts.apex"
-wait_for_async 5
 run_apex_until_success "$E2E_TEST_ROOT/queueable_concurrent/71_should_assert_retryable_queueable_job_with_ten_attempts_failed.apex" 120 5
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/00_cleanup.apex"
@@ -31,16 +28,14 @@ run_apex "$E2E_TEST_ROOT/queueable_concurrent/50_should_keep_delayed_dispatches_
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/00_cleanup.apex"
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/52_should_enqueue_immediate_queueable_without_canceling_delayed_queueable.apex"
-wait_for_async 5
-run_apex "$E2E_TEST_ROOT/queueable_concurrent/53_should_assert_immediate_queueable_completed_and_delayed_queueable_waits.apex"
+run_apex_until_success "$E2E_TEST_ROOT/queueable_concurrent/53_should_assert_immediate_queueable_completed_and_delayed_queueable_waits.apex" 120 5
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/00_cleanup.apex"
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/55_should_skip_already_initiated_retry_candidate_when_dispatching_remaining_job.apex"
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/00_cleanup.apex"
 
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/60_should_enqueue_catastrophic_queueable_failure.apex"
-wait_for_async 5
-run_apex "$E2E_TEST_ROOT/queueable_concurrent/61_should_assert_catastrophic_queueable_failure_is_recorded.apex"
+run_apex_until_success "$E2E_TEST_ROOT/queueable_concurrent/61_should_assert_catastrophic_queueable_failure_is_recorded.apex" 120 5
 run_apex "$E2E_TEST_ROOT/queueable_concurrent/00_cleanup.apex"
 
 echo

@@ -98,6 +98,20 @@ _Number_
 
 ---
 
+### Category
+
+Optional indexed job category for business SOQL lookups.
+
+**API Name**
+
+`Category__c`
+
+**Type**
+
+_Text_
+
+---
+
 ### Checkpoint
 
 Serialized processor-defined state persisted between cooperative job executions.
@@ -109,6 +123,20 @@ Serialized processor-defined state persisted between cooperative job executions.
 **Type**
 
 _LongTextArea_
+
+---
+
+### Correlation Id
+
+Optional indexed correlation id for tracing work across systems or business processes.
+
+**API Name**
+
+`CorrelationId__c`
+
+**Type**
+
+_Text_
 
 ---
 
@@ -235,6 +263,20 @@ Failure reason captured from the most recent failed attempt.
 **Type**
 
 _LongTextArea_
+
+---
+
+### Group Key
+
+Optional indexed business grouping key, such as an order, invoice, customer, or tenant id.
+
+**API Name**
+
+`GroupKey__c`
+
+**Type**
+
+_Text_
 
 ---
 

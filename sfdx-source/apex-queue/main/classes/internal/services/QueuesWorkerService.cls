@@ -34,6 +34,7 @@ public inherited sharing class QueuesWorkerService {
     );
     private QueuesScheduleRepository scheduleRepository = new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE);
     private QueuesErrorService errorService = new QueuesErrorService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesWorkerService() {
     }
@@ -46,7 +47,8 @@ public inherited sharing class QueuesWorkerService {
         final QueuesJobExecutionService jobExecutionService,
         final QueuesAsyncApexJobRepository asyncApexJobRepository,
         final QueuesScheduleRepository scheduleRepository,
-        final QueuesErrorService errorService
+        final QueuesErrorService errorService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.definitionService = definitionService;
         this.runtimeService = runtimeService;
@@ -55,6 +57,7 @@ public inherited sharing class QueuesWorkerService {
         this.asyncApexJobRepository = asyncApexJobRepository;
         this.scheduleRepository = scheduleRepository;
         this.errorService = errorService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Workers">
@@ -148,6 +151,7 @@ public inherited sharing class QueuesWorkerService {
 
         runtimeService.incrementActiveWorkerCount(runtime);
         runtimeService.updateRuntimeAsSystem(runtime);
+        queueEventService.publishActiveJobEvents(claimedJobs);
         return jobService.queryClaimedJobLocatorAsSystem(claimedJobs);
     }
 
@@ -510,7 +514,10 @@ public inherited sharing class QueuesWorkerService {
         String safeToken = String.isBlank(workerToken) ? 'worker' : workerToken.left(8);
         String safeWakeAt = desiredWakeAt == null ? 'now' : '' + desiredWakeAt.getTime();
         String testSuffix = Test.isRunningTest() ? ':' + QueuesSupport.generateRandomToken().left(6) : '';
-        String jobName = 'Queues:' + safeQueueName + ':' + safeWakeAt + ':' + safeToken + testSuffix;
+        String jobName = String.format(
+            'Queues:{0}:{1}:{2}{3}',
+            new List<String>{ safeQueueName, safeWakeAt, safeToken, testSuffix }
+        );
         return jobName.length() <= 80 ? jobName : jobName.left(80);
     }
     // </editor-fold>

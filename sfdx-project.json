@@ -2,7 +2,7 @@
     "packageDirectories": [
         {
             "versionName": "ver 0.2",
-            "versionNumber": "0.2.0.NEXT",
+            "versionNumber": "0.2.1.NEXT",
             "path": "sfdx-source/apex-queue",
             "default": true,
             "package": "apex-queue"
@@ -10,7 +10,7 @@
     ],
     "name": "apex-queue",
     "packageAliases": {
-        "apex-queue": "0HoJ5000000002WKAQ",
-        "apex-queue@latest": "04tJ5000000DA2tIAG"
+        "apex-queue": "0Hofj0000002ArJCAU",
+        "apex-queue@latest": "04tfj000000MNijAAG"
     }
 }

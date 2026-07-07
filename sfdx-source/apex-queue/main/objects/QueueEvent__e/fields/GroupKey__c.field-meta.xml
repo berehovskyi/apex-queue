@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Optional group key copied from the queue job for business-level lookup.</description>
+    <fullName>GroupKey__c</fullName>
+    <label>Group Key</label>
+    <length>255</length>
+    <type>Text</type>
+</CustomField>

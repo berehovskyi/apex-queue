@@ -15,6 +15,10 @@ public inherited sharing class QueuesQueueAdminService {
     private static final String STALLED_JOB_MESSAGE = 'Lease expired before worker completed.';
     private static final String STALLED_JOB_EXHAUSTED_MESSAGE = 'Lease expired before worker completed and no more recovery attempts remain.';
     private static final String CANCELED_BY_QUEUE_CANCEL_REASON = 'Canceled by queue cancel.';
+    private static final String STALLED_JOB_RECOVERY_COMPONENT = 'stalled job recovery';
+    private static final String QUEUEABLE_DISPATCH_RECOVERY_COMPONENT = 'queueable dispatch recovery';
+    private static final String QUEUEABLE_HANDOFF_RECOVERY_COMPONENT = 'queueable handoff recovery';
+    private static final String QUEUEABLE_STALLED_JOB_RECOVERY_COMPONENT = 'queueable stalled job recovery';
     private static final String MANAGE_WORKERS_PERMISSION = 'QueuesManageWorkers';
     private static final String MANAGE_WORKERS_PERMISSION_MESSAGE = 'QueuesManageWorkers permission is required.';
     private static final Set<String> ACTIVE_QUEUEABLE_ASYNC_JOB_STATUSES = new Set<String>{
@@ -37,6 +41,7 @@ public inherited sharing class QueuesQueueAdminService {
     );
     private QueuesStalledJobRecoveryService stalledJobRecoveryService = new QueuesStalledJobRecoveryService();
     private QueuesWorkerService workerService = new QueuesWorkerService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesQueueAdminService() {
     }
@@ -52,7 +57,8 @@ public inherited sharing class QueuesQueueAdminService {
         final QueuesAsyncApexJobRepository asyncApexJobRepository,
         final QueuesStalledJobRecoveryService stalledJobRecoveryService,
         final QueuesFlowProducerService flowProducerService,
-        final QueuesWorkerService workerService
+        final QueuesWorkerService workerService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.definitionService = definitionService;
         this.runtimeService = runtimeService;
@@ -64,6 +70,7 @@ public inherited sharing class QueuesQueueAdminService {
         this.stalledJobRecoveryService = stalledJobRecoveryService;
         this.flowProducerService = flowProducerService;
         this.workerService = workerService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Queue Administration">
@@ -111,7 +118,7 @@ public inherited sharing class QueuesQueueAdminService {
     public Integer cancel(final String queueName) {
         return processDrainableJobs(
             queueName,
-            new CancelDrainableJobAction(queueName, jobService, flowProducerService)
+            new CancelDrainableJobAction(queueName, jobService, flowProducerService, queueEventService)
         );
     }
 
@@ -261,6 +268,7 @@ public inherited sharing class QueuesQueueAdminService {
 
         jobService.updateJobs(stalledJobs, asSystem);
         jobRunService.insertJobRuns(runs, asSystem);
+        queueEventService.publishStallRecoveryJobEvents(stalledJobs, runs, STALLED_JOB_RECOVERY_COMPONENT);
         return stalledJobs.size();
     }
 
@@ -315,12 +323,18 @@ public inherited sharing class QueuesQueueAdminService {
         final Integer dispatchLimit,
         final Boolean asSystem
     ) {
-        return queueableDispatchService.recoverStaleDispatches(
+        Integer recoveredCount = queueableDispatchService.recoverStaleDispatches(
             queueDefinition.QueueName__c,
             staleBefore,
             dispatchLimit,
             asSystem
         );
+        queueEventService.publishRecovered(
+            queueDefinition.QueueName__c,
+            QUEUEABLE_DISPATCH_RECOVERY_COMPONENT,
+            recoveredCount
+        );
+        return recoveredCount;
     }
 
     private Integer recoverStaleInitiatedQueueableJobs(
@@ -344,6 +358,7 @@ public inherited sharing class QueuesQueueAdminService {
         for (Job__c staleJob : staleJobs) {
             queueableExecutionService.enqueueJob(staleJob.Id);
         }
+        queueEventService.publishRecoveredJobEvents(staleJobs, null, QUEUEABLE_HANDOFF_RECOVERY_COMPONENT);
         return staleJobs.size();
     }
 
@@ -387,6 +402,7 @@ public inherited sharing class QueuesQueueAdminService {
 
         jobService.updateJobs(stalledJobs, asSystem);
         jobRunService.insertJobRuns(runs, asSystem);
+        queueEventService.publishStallRecoveryJobEvents(stalledJobs, runs, QUEUEABLE_STALLED_JOB_RECOVERY_COMPONENT);
         for (Id recoveredJobId : recoveredJobIds) {
             queueableExecutionService.enqueueJob(recoveredJobId);
         }
@@ -489,15 +505,18 @@ public inherited sharing class QueuesQueueAdminService {
         private final String queueName;
         private final QueuesJobService jobService;
         private final QueuesFlowProducerService flowProducerService;
+        private final QueuesQueueEventService queueEventService;
 
         private CancelDrainableJobAction(
             final String queueName,
             final QueuesJobService jobService,
-            final QueuesFlowProducerService flowProducerService
+            final QueuesFlowProducerService flowProducerService,
+            final QueuesQueueEventService queueEventService
         ) {
             this.queueName = queueName;
             this.jobService = jobService;
             this.flowProducerService = flowProducerService;
+            this.queueEventService = queueEventService;
         }
 
         public DrainableJobActionResult apply(final List<Job__c> jobs) {
@@ -505,6 +524,7 @@ public inherited sharing class QueuesQueueAdminService {
                 QueuesJobService.applyCanceled(job, CANCELED_BY_QUEUE_CANCEL_REASON);
             }
             jobService.updateJobs(jobs);
+            queueEventService.publishCanceledJobEvents(jobs);
             flowProducerService.resolveParentDependenciesAsSystem(
                 jobs,
                 new Set<String>{ queueName },

@@ -21,7 +21,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -64,7 +65,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -97,7 +99,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -133,7 +136,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -179,7 +183,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -225,7 +230,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -255,7 +261,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -297,7 +304,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -366,7 +374,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -410,7 +419,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -464,7 +474,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -507,7 +518,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -550,7 +562,8 @@ private class QueuesWorkerServiceTest {
             executionStub,
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -594,7 +607,8 @@ private class QueuesWorkerServiceTest {
             executionStub,
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -636,7 +650,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -681,7 +696,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -745,7 +761,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -809,7 +826,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -878,7 +896,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -933,7 +952,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -978,7 +998,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1024,7 +1045,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1055,7 +1077,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1110,7 +1133,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1160,7 +1184,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1213,7 +1238,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            errorService
+            errorService,
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -1289,7 +1315,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            errorService
+            errorService,
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -1363,7 +1390,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             (QueuesAsyncApexJobRepository) Test.createStub(QueuesAsyncApexJobRepository.class, asyncRepositoryProvider),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -1438,7 +1466,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            errorService
+            errorService,
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -1511,7 +1540,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            errorService
+            errorService,
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -1574,7 +1604,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            errorService
+            errorService,
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -1623,7 +1654,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1651,7 +1683,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1677,7 +1710,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1724,7 +1758,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            errorService
+            errorService,
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1779,7 +1814,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleProvider),
-            errorService
+            errorService,
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1821,7 +1857,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1859,7 +1896,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1899,7 +1937,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1934,7 +1973,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -1968,7 +2008,8 @@ private class QueuesWorkerServiceTest {
             (QueuesJobExecutionService) Test.createStub(QueuesJobExecutionService.class, executionProvider),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -2005,7 +2046,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -2050,7 +2092,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -2097,7 +2140,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -2145,7 +2189,8 @@ private class QueuesWorkerServiceTest {
             new QueuesJobExecutionService(),
             new QueuesAsyncApexJobRepository(),
             new QueuesScheduleRepository(),
-            new QueuesErrorService()
+            new QueuesErrorService(),
+            new QueuesQueueEventService()
         );
 
         // Act

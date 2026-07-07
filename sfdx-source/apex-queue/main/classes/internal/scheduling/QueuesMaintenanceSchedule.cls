@@ -65,12 +65,10 @@ public virtual inherited sharing class QueuesMaintenanceSchedule {
                 abortedCount++;
             } catch (Exception ex) {
                 QueuesSupport.debugError(
-                    'Failed to abort maintenance schedule job ' +
-                        scheduledJob.Id +
-                        ': ' +
-                        ex.getMessage() +
-                        '\n' +
-                        ex.getStackTraceString()
+                    String.format(
+                        'Failed to abort maintenance schedule job {0}: {1}\n{2}',
+                        new List<Object>{ scheduledJob.Id, ex.getMessage(), ex.getStackTraceString() }
+                    )
                 );
             }
         }

@@ -18,6 +18,8 @@ public inherited sharing class QueuesJobAdminService {
     private static final String INVALID_UPDATE_PROGRESS_MESSAGE = 'Active jobs cannot update progress.';
     private static final String INVALID_DISCARD_MESSAGE = 'Active jobs cannot be discarded.';
     private static final String INVALID_CANCEL_MESSAGE = 'Only waiting, delayed, paused, or waiting-children jobs can be canceled.';
+    private static final String INVALID_DELAY_MINUTES_MESSAGE = 'delayMinutes must be zero or greater';
+    private static final String INVALID_PRIORITY_MESSAGE = 'priority must be zero or greater';
     private static final String CANCELED_BY_JOB_CANCEL_REASON = 'Canceled by job cancel.';
 
     private static final Set<Queues.State> PAUSEABLE_JOB_STATES = new Set<Queues.State>{
@@ -53,6 +55,7 @@ public inherited sharing class QueuesJobAdminService {
     private QueuesQueueableExecutionService queueableExecutionService = new QueuesQueueableExecutionService();
     private QueuesFlowProducerService flowProducerService = new QueuesFlowProducerService();
     private QueuesWorkerService workerService = new QueuesWorkerService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesJobAdminService() {
     }
@@ -63,13 +66,15 @@ public inherited sharing class QueuesJobAdminService {
         final QueuesRuntimeService runtimeService,
         final QueuesQueueableExecutionService queueableExecutionService,
         final QueuesFlowProducerService flowProducerService,
-        final QueuesWorkerService workerService
+        final QueuesWorkerService workerService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.jobService = jobService;
         this.runtimeService = runtimeService;
         this.queueableExecutionService = queueableExecutionService;
         this.flowProducerService = flowProducerService;
         this.workerService = workerService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Commands">
@@ -157,7 +162,7 @@ public inherited sharing class QueuesJobAdminService {
     }
 
     public Job__c deferJob(final Id jobId, final Integer delayMinutes) {
-        QueuesSupport.isTrue(delayMinutes >= 0, 'delayMinutes must be zero or greater');
+        QueuesSupport.isTrue(delayMinutes >= 0, INVALID_DELAY_MINUTES_MESSAGE);
 
         lockQueueRuntimeForJob(jobId);
         Job__c job = jobService.requireJobForUpdate(jobId);
@@ -203,6 +208,7 @@ public inherited sharing class QueuesJobAdminService {
         Datetime currentNow = QueuesSupport.now();
         QueuesJobService.applyCanceled(job, CANCELED_BY_JOB_CANCEL_REASON);
         job = jobService.updateJob(job);
+        queueEventService.publishCanceledJobEvents(new List<Job__c>{ job });
         flowProducerService.resolveParentDependenciesAsSystem(
             new List<Job__c>{ job },
             new Set<String>(),
@@ -215,7 +221,7 @@ public inherited sharing class QueuesJobAdminService {
     }
 
     public Job__c changePriority(final Id jobId, final Integer priority) {
-        QueuesSupport.isTrue(priority >= 0, 'priority must be zero or greater');
+        QueuesSupport.isTrue(priority >= 0, INVALID_PRIORITY_MESSAGE);
 
         lockQueueRuntimeForJob(jobId);
         Job__c job = jobService.requireJobForUpdate(jobId);

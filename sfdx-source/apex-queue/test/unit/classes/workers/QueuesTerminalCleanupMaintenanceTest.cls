@@ -8,7 +8,9 @@ private class QueuesTerminalCleanupMaintenanceTest {
         QueuesService serviceStub = (QueuesService) Test.createStub(QueuesService.class, serviceProvider);
         QueuesMaintenanceWorker maintenance = new QueuesMaintenanceWorker(
             serviceStub,
-            new QueuesTerminalCleanupMaintenance()
+            new QueuesErrorService(),
+            new QueuesTerminalCleanupMaintenance(),
+            false
         );
 
         // Act

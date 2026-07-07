@@ -44,6 +44,31 @@ public class QueuesTestSupport {
         );
     }
 
+    public static QueuesQueueEventService newRecordingQueueEventService(
+        final String queueName,
+        final String publishedEventTypes,
+        final RecordingStubProvider eventProvider
+    ) {
+        QueueDefinition__mdt definition = queueDefinition(queueName, true);
+        definition.PublishedEventTypes__c = publishedEventTypes;
+        QueuesDefinitionService definitionService = (QueuesDefinitionService) Test.createStub(
+            QueuesDefinitionService.class,
+            new RecordingStubProvider()
+                .withReturn('findQueueDefinitionAsSystem', definition)
+                .withReturn('queryQueueDefinitionsByQueueNames', new List<QueueDefinition__mdt>{ definition })
+                .withReturn(
+                    'findQueueDefinitionsByQueueNamesAsSystem',
+                    new Map<String, QueueDefinition__mdt>{ queueName => definition }
+                )
+        );
+
+        return new QueuesQueueEventService(
+            definitionService,
+            new QueuesErrorService(),
+            (QueuesQueueEventRepository) Test.createStub(QueuesQueueEventRepository.class, eventProvider)
+        );
+    }
+
     public static QueueDefinition__mdt queueDefinition() {
         return queueDefinition(DEFAULT_QUEUE_NAME, true);
     }
@@ -299,7 +324,8 @@ public class QueuesTestSupport {
             processorService,
             queueableDispatchService,
             runtimeService,
-            workerService
+            workerService,
+            new QueuesQueueEventService()
         );
         QueuesJobSchedulerService jobSchedulerService = new QueuesJobSchedulerService(
             definitionService,
@@ -311,7 +337,8 @@ public class QueuesTestSupport {
             new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE),
             new QueuesJobSchedulerSchedule(),
             flowProducerService,
-            workerService
+            workerService,
+            new QueuesQueueEventService()
         );
         QueuesQueueAdminService queueAdminService = new QueuesQueueAdminService(
             definitionService,
@@ -323,14 +350,16 @@ public class QueuesTestSupport {
             new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
             new QueuesStalledJobRecoveryService(),
             flowProducerService,
-            workerService
+            workerService,
+            new QueuesQueueEventService()
         );
         QueuesJobAdminService jobAdminService = new QueuesJobAdminService(
             jobService,
             runtimeService,
             queueableExecutionService,
             flowProducerService,
-            workerService
+            workerService,
+            new QueuesQueueEventService()
         );
 
         return new QueuesService(

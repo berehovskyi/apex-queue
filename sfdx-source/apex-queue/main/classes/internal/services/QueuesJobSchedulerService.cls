@@ -19,6 +19,7 @@ public inherited sharing class QueuesJobSchedulerService {
     private static final String CANCELED_BY_SCHEDULER_CANCEL_REASON = 'Canceled by job scheduler cancel.';
     private static final String INVALID_REMOVE_ACTIVE_JOBS_MESSAGE = 'Active scheduler jobs cannot be removed.';
     private static final String INCOMPLETE_REPLACEMENT_CANCEL_MESSAGE = 'Queue "{0}" job scheduler "{1}" has too many pending jobs to replace safely. Cancel or remove it before replacing.';
+    private static final String EXISTING_SCHEDULER_JOB_EXECUTION_MODE_MESSAGE = 'Existing scheduler job execution mode does not match scheduler execution mode.';
     private static final String JOB_SCHEDULER_MATERIALIZER_COMPONENT = 'job scheduler materializer';
     private static final String JOB_SCHEDULER_REPAIR_COMPONENT = 'job scheduler repair';
     private static final Integer MINIMUM_FUTURE_SCHEDULE_OFFSET_MINUTES = 1;
@@ -49,6 +50,7 @@ public inherited sharing class QueuesJobSchedulerService {
     private QueuesScheduleRepository scheduleRepository = new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE);
     private QueuesJobSchedulerSchedule scheduleService = new QueuesJobSchedulerSchedule();
     private QueuesWorkerService workerService = new QueuesWorkerService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesJobSchedulerService() {
     }
@@ -64,7 +66,8 @@ public inherited sharing class QueuesJobSchedulerService {
         final QueuesScheduleRepository scheduleRepository,
         final QueuesJobSchedulerSchedule scheduleService,
         final QueuesFlowProducerService flowProducerService,
-        final QueuesWorkerService workerService
+        final QueuesWorkerService workerService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.definitionService = definitionService;
         this.errorService = errorService;
@@ -77,6 +80,7 @@ public inherited sharing class QueuesJobSchedulerService {
         this.scheduleService = scheduleService;
         this.flowProducerService = flowProducerService;
         this.workerService = workerService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Job Schedulers">
@@ -111,7 +115,8 @@ public inherited sharing class QueuesJobSchedulerService {
         processorService.requireProcessors(templateJobs);
 
         Savepoint savepoint = Database.setSavepoint();
-        String newScheduledJobId = null;
+        String newScheduledJobId;
+        queueEventService.beginScope();
         try {
             Datetime currentNow = QueuesSupport.now();
             JobScheduler__c scheduler = findJobSchedulerForUpdate(queueName, jobSchedulerId);
@@ -180,9 +185,11 @@ public inherited sharing class QueuesJobSchedulerService {
                 abortedScheduledJobIds,
                 new List<CronTrigger>()
             );
+            queueEventService.commitScope();
             return materializedJob;
         } catch (Exception ex) {
             Database.rollback(savepoint);
+            queueEventService.abandonScope();
             abortScheduledJobIfPresent(newScheduledJobId, null, new Set<String>(), new List<CronTrigger>());
             throw ex;
         }
@@ -414,7 +421,7 @@ public inherited sharing class QueuesJobSchedulerService {
         final Datetime currentNow
     ) {
         if (String.isNotBlank(repeatOpts.getPattern())) {
-            String scheduledJobId = null;
+            String scheduledJobId;
             try {
                 Id scheduledJobRecordId = scheduleService.schedulePattern(scheduler.Id, repeatOpts.getPattern());
                 scheduledJobId = scheduledJobRecordId;
@@ -506,7 +513,7 @@ public inherited sharing class QueuesJobSchedulerService {
         }
 
         String previousScheduledJobId = scheduler.ScheduledJobId__c;
-        String repairedScheduledJobId = null;
+        String repairedScheduledJobId;
         try {
             repairedScheduledJobId = scheduleService.schedulePattern(scheduler.Id, scheduler.Pattern__c);
             Datetime nextRunAt = findActiveScheduledJobById(repairedScheduledJobId)?.NextFireTime;
@@ -544,7 +551,7 @@ public inherited sharing class QueuesJobSchedulerService {
         }
 
         String previousScheduledJobId = scheduler.ScheduledJobId__c;
-        String repairedScheduledJobId = null;
+        String repairedScheduledJobId;
         try {
             repairedScheduledJobId = scheduleService.scheduleEvery(
                 scheduler.Id,
@@ -583,7 +590,7 @@ public inherited sharing class QueuesJobSchedulerService {
     private void recordSchedulerRepairError(final JobScheduler__c scheduler, final Exception ex) {
         errorService.recordQueueError(
             scheduler.QueueName__c,
-            JOB_SCHEDULER_REPAIR_COMPONENT + ': ' + scheduler.Name,
+            String.format('{0}: {1}', new List<String>{ JOB_SCHEDULER_REPAIR_COMPONENT, scheduler.Name }),
             ex
         );
     }
@@ -592,7 +599,7 @@ public inherited sharing class QueuesJobSchedulerService {
         JobScheduler__c scheduler = findJobSchedulerById(jobSchedulerRecordId);
         errorService.recordQueueError(
             scheduler.QueueName__c,
-            JOB_SCHEDULER_MATERIALIZER_COMPONENT + ': ' + scheduler.Name,
+            String.format('{0}: {1}', new List<String>{ JOB_SCHEDULER_MATERIALIZER_COMPONENT, scheduler.Name }),
             ex
         );
     }
@@ -606,7 +613,8 @@ public inherited sharing class QueuesJobSchedulerService {
         final Boolean scheduleNextEveryWake
     ) {
         Savepoint savepoint = Database.setSavepoint();
-        String nextScheduledJobId = null;
+        String nextScheduledJobId;
+        queueEventService.beginScope();
         try {
             if (scheduleNextEveryWake) {
                 nextScheduledJobId = scheduleService.scheduleEvery(scheduler.Id, runAt);
@@ -630,8 +638,10 @@ public inherited sharing class QueuesJobSchedulerService {
                 schedulerUpdate.ScheduledJobId__c = nextScheduledJobId;
             }
             systemModeSchedulerRepository.updateJobScheduler(schedulerUpdate);
+            queueEventService.commitScope();
         } catch (Exception ex) {
             Database.rollback(savepoint);
+            queueEventService.abandonScope();
             abortScheduledJobIfPresent(nextScheduledJobId, null, new Set<String>(), new List<CronTrigger>());
             throw ex;
         }
@@ -679,6 +689,7 @@ public inherited sharing class QueuesJobSchedulerService {
         if (saveResult.isSuccess()) {
             job.Id = saveResult.getId();
             scheduleWorkerForMaterializedJob(scheduler.QueueName__c, job, executionMode);
+            queueEventService.publishSchedulerMaterialized(scheduler, job);
             return job;
         }
 
@@ -744,7 +755,7 @@ public inherited sharing class QueuesJobSchedulerService {
     private static void requireMatchingExecutionMode(final Job__c job, final Queues.ExecutionMode executionMode) {
         QueuesSupport.isTrue(
             QueuesSupport.toExecutionMode(job.ExecutionMode__c) == executionMode,
-            new Queues.QueueException('Existing scheduler job execution mode does not match scheduler execution mode.')
+            new Queues.QueueException(EXISTING_SCHEDULER_JOB_EXECUTION_MODE_MESSAGE)
         );
     }
 
@@ -1373,7 +1384,7 @@ public inherited sharing class QueuesJobSchedulerService {
         final JobScheduler__c scheduler,
         final Integer iterationCount
     ) {
-        return 'scheduler:' + scheduler.Id + ':' + iterationCount;
+        return String.format('scheduler:{0}:{1}', new List<Object>{ scheduler.Id, iterationCount });
     }
 
     private static String resolveScheduledJobNamePrefix(final JobScheduler__c scheduler) {

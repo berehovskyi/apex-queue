@@ -95,22 +95,24 @@ public virtual inherited sharing class QueuesErrorEventRepository {
                 return;
             }
 
-            String singleInsertFailureMessage =
-                '\nLast single-insert failure: ' +
-                retrySummary.lastException.getMessage() +
-                '\n' +
-                retrySummary.lastException.getStackTraceString();
+            String singleInsertFailureMessage = String.format(
+                '\nLast single-insert failure: {0}\n{1}',
+                new List<String>{
+                    retrySummary.lastException.getMessage(),
+                    retrySummary.lastException.getStackTraceString()
+                }
+            );
             QueuesSupport.debugError(
-                'Queues error callback capture failed. Inserted ' +
-                    retrySummary.insertedCount +
-                    ' of ' +
-                    errors.size() +
-                    ' rows.' +
-                    '\nBulk failure: ' +
-                    bulkInsertException.getMessage() +
-                    '\n' +
-                    bulkInsertException.getStackTraceString() +
-                    singleInsertFailureMessage
+                String.format(
+                    'Queues error callback capture failed. Inserted {0} of {1} rows.\nBulk failure: {2}\n{3}{4}',
+                    new List<Object>{
+                        retrySummary.insertedCount,
+                        errors.size(),
+                        bulkInsertException.getMessage(),
+                        bulkInsertException.getStackTraceString(),
+                        singleInsertFailureMessage
+                    }
+                )
             );
         }
 

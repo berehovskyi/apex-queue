@@ -8,7 +8,9 @@ private class QueuesJobSchedulerMaintenanceTest {
         QueuesService serviceStub = (QueuesService) Test.createStub(QueuesService.class, serviceProvider);
         QueuesMaintenanceWorker maintenance = new QueuesMaintenanceWorker(
             serviceStub,
-            new QueuesJobSchedulerMaintenance()
+            new QueuesErrorService(),
+            new QueuesJobSchedulerMaintenance(),
+            false
         );
 
         // Act
@@ -27,7 +29,9 @@ private class QueuesJobSchedulerMaintenanceTest {
         QueuesService serviceStub = (QueuesService) Test.createStub(QueuesService.class, serviceProvider);
         QueuesMaintenanceWorker maintenance = new QueuesMaintenanceWorker(
             serviceStub,
-            new QueuesJobSchedulerMaintenance()
+            new QueuesErrorService(),
+            new QueuesJobSchedulerMaintenance(),
+            false
         );
         QueuesJobSchedulerMaintenance.queueableSubmissionHeadroomOverride = false;
 
@@ -47,7 +51,9 @@ private class QueuesJobSchedulerMaintenanceTest {
         QueuesService serviceStub = (QueuesService) Test.createStub(QueuesService.class, serviceProvider);
         QueuesMaintenanceWorker maintenance = new QueuesMaintenanceWorker(
             serviceStub,
-            new QueuesJobSchedulerMaintenance()
+            new QueuesErrorService(),
+            new QueuesJobSchedulerMaintenance(),
+            false
         );
         QueuesQueueableStackSupport.forceQueueableStackContext = true;
         QueuesQueueableStackSupport.forceCurrentQueueableStackDepth = 4;

@@ -55,6 +55,46 @@ Legend:
 - One org-wide pool shared by `@future`, `Queueable`, `Batch`, and `Scheduled` Apex. Synchronous Apex does not draw from it.
 - `finalizer`: not charged to the pool
 
+## Locking And Deadlocks
+
+Observed row-lock behavior:
+
+| User A operation | User A details | User B edit details       | Result                                                                                                                                                                              |
+| ---------------- | -------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `READ`           | Plain SOQL     | Plain SOQL, then update   | User B can update.                                                                                                                                                                  |
+| `READ`           | `FOR UPDATE`   | Plain SOQL, then update   | User B's update waits for the lock. If the lock is released in time, the update succeeds; otherwise it fails with `System.DmlException`: `UNABLE_TO_LOCK_ROW`.                      |
+| `READ`           | `FOR UPDATE`   | `FOR UPDATE`, then update | User B's `FOR UPDATE` waits for the lock. If released in time, User B locks and updates; otherwise the query fails with `System.QueryException`: `Record Currently Unavailable...`. |
+| `READ`           | Plain SOQL     | `FOR UPDATE`, then update | User B can lock and update.                                                                                                                                                         |
+| `EDIT`           | Update         | Plain SOQL, then update   | User B can read the committed version. The update waits for the lock; if not released in time, it fails with `System.DmlException`: `UNABLE_TO_LOCK_ROW`.                           |
+| `EDIT`           | Update         | `FOR UPDATE`, then update | User B's `FOR UPDATE` waits for the lock. If released in time, User B locks and updates; otherwise the query fails with `System.QueryException`: `Record Currently Unavailable...`. |
+
+- Plain SOQL does not reserve a row. `FOR UPDATE` reserves the row for the
+  current transaction until commit or rollback.
+- Salesforce releases row locks automatically when the transaction completes.
+  Apex code cannot release a `FOR UPDATE` lock early.
+- A `FOR UPDATE` query against an already locked row waits for the lock to be
+  released, then throws `System.QueryException` if it cannot acquire the lock.
+- A later update still needs an exclusive lock. If another transaction already
+  holds the row with `FOR UPDATE`, the update waits for the lock and can fail
+  even when the second transaction originally read without `FOR UPDATE`.
+- DML also holds an exclusive row lock until commit or rollback. A transaction
+  that updated the row makes later updates and later `FOR UPDATE` reads wait
+  from other transactions.
+- Deadlocks are caused by inconsistent lock order: transaction A holds row X
+  and waits for row Y while transaction B holds row Y and waits for row X.
+  Salesforce surfaces this as lock timeout or row-unavailable failures, not as
+  a durable framework state problem.
+- Child DML can implicitly lock parent records, such as master-detail parents
+  or restricted-delete lookup parents. Within one DML call, same-type rows are
+  not a framework-owned safety net; framework code must provide deterministic
+  ordering when lock order matters.
+- Framework paths that lock multiple durable objects must use a stable lock
+  order, or defer the second lock to a later transaction. Do not fight the
+  platform order with ad hoc `FOR UPDATE` sequences. Lock parent or container
+  rows before dependent rows, use deterministic Id ordering within the same
+  sObject type, and do not hold job locks while entering paths that may lock
+  queue runtimes in the opposite order.
+
 ## Durable State And Idempotency
 
 - `Job__c` is the source of truth for job state.
@@ -347,6 +387,25 @@ Legend:
   savepoints.
 - Queue-error telemetry may use publish-immediate platform events from outer
   framework seams only.
+- `QueueEvent__e` is optional lifecycle telemetry, not durable framework state.
+  Event publish failures and invalid event configuration must never block job
+  completion, cancellation, recovery, scheduler materialization, or cleanup.
+- `QueueEvent__e` uses `PublishAfterCommit`. Events emitted inside framework
+  savepoint scopes must be buffered and published only when the owning scope
+  commits. A rollback must abandon buffered events so subscribers never observe
+  lifecycle events for rolled-back durable state.
+- `QueueErrorEvent__e` is operational error telemetry and may publish
+  immediately from outer framework seams.
+- `RECOVERED` events may be per-job or aggregate. Per-job events populate
+  `JobId__c`; aggregate events leave `JobId__c` blank and populate
+  `JobCount__c` plus `Component__c`.
+- `ACTIVE` events mean a job was durably claimed or handed off by a transport.
+  They do not guarantee the processor is currently executing, especially for
+  queueable jobs handed off to Salesforce async.
+- `QueueEvent__e.Type__c` is text because Platform Events do not support
+  picklists. Valid values are owned by Apex enum validation.
+- Queue events preallocate `EventUuid`; publishing must use the `EventBus`
+  callback overload.
 - Do not add optional telemetry DML to the clean processor transaction.
 - Duplicate logical queue errors within one transaction should be coalesced
   before publish.

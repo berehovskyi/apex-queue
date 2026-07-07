@@ -118,7 +118,7 @@ public without sharing class QueuesBatchApexErrorEventHandler {
         if (String.isBlank(message)) {
             return exceptionType;
         }
-        return exceptionType + ': ' + message;
+        return String.format('{0}: {1}', new List<String>{ exceptionType, message });
     }
 
     private static Datetime resolveOccurredAt(final BatchApexErrorEvent eventRecord) {
@@ -132,7 +132,7 @@ public without sharing class QueuesBatchApexErrorEventHandler {
         if (String.isBlank(failureMessage)) {
             return stackTrace;
         }
-        return failureMessage + '\n' + stackTrace;
+        return String.format('{0}\n{1}', new List<String>{ failureMessage, stackTrace });
     }
 
     @TestVisible

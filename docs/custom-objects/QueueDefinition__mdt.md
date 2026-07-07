@@ -22,6 +22,34 @@ _Number_
 
 ---
 
+### Canceled Retention Days
+
+Duration days to keep canceled jobs in hot Job\_\_c storage before terminal cleanup can delete them.
+
+**API Name**
+
+`CanceledRetentionDays__c`
+
+**Type**
+
+_Number_
+
+---
+
+### Completed Retention Days
+
+Duration days to keep completed jobs in hot Job\_\_c storage before terminal cleanup can delete them.
+
+**API Name**
+
+`CompletedRetentionDays__c`
+
+**Type**
+
+_Number_
+
+---
+
 ### Default Attempts
 
 Default max attempts to apply when a job does not override attempts in its options.
@@ -112,6 +140,20 @@ _LongTextArea_
 
 ---
 
+### Failed Retention Days
+
+Duration days to keep failed jobs in hot Job\_\_c storage before terminal cleanup can delete them.
+
+**API Name**
+
+`FailedRetentionDays__c`
+
+**Type**
+
+_Number_
+
+---
+
 ### Is Active
 
 Controls whether the queue definition is available for enqueue, claim, and scheduler operations.
@@ -123,6 +165,20 @@ Controls whether the queue definition is available for enqueue, claim, and sched
 **Type**
 
 _Checkbox_
+
+---
+
+### Published Event Types
+
+Optional semicolon-separated queue event types published for this queue. Blank disables events; ALL publishes every supported type. Supported values: ACTIVE; COMPLETED; FAILED; CANCELED; STALLED; RECOVERED; SCHEDULER_MATERIALIZED; CLEANED.
+
+**API Name**
+
+`PublishedEventTypes__c`
+
+**Type**
+
+_Text_
 
 ---
 
@@ -139,3 +195,24 @@ Stable queue API name used by queue facades and runtime services.
 **Type**
 
 _Text_
+
+---
+
+### Terminal Cleanup Policy
+
+**Required**
+
+Policy applied by maintenance to terminal jobs after their hot-retention window expires.
+
+**API Name**
+
+`TerminalCleanupPolicy__c`
+
+**Type**
+
+_Picklist_
+
+#### Possible values are
+
+- DELETE
+- KEEP

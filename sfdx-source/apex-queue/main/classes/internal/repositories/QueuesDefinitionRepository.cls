@@ -16,6 +16,7 @@ public inherited sharing class QueuesDefinitionRepository {
         'DefaultBackoffJitter__c, ' +
         'DefaultLeaseMinutes__c, ' +
         'BatchClaimSize__c, ' +
+        'PublishedEventTypes__c, ' +
         'TerminalCleanupPolicy__c, ' +
         'CompletedRetentionDays__c, ' +
         'FailedRetentionDays__c, ' +

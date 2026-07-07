@@ -9,12 +9,15 @@
 public inherited sharing class QueuesInvocableExecutionService {
     private static final String STALLED_JOB_MESSAGE = 'Lease expired before invocable action completed.';
     private static final String STALLED_JOB_EXHAUSTED_MESSAGE = 'Lease expired before invocable action completed and no more recovery attempts remain.';
+    private static final String INVOCABLE_STALLED_JOB_RECOVERY_COMPONENT = 'invocable stalled job recovery';
+    private static final String INVOCABLE_LOST_WAKE_RECOVERY_COMPONENT = 'invocable lost wake recovery';
     private static final Integer LOST_WAKE_REPAIR_DELAY_MINUTES = 1;
 
     private QueuesJobService jobService = new QueuesJobService();
     private QueuesJobExecutionService jobExecutionService = new QueuesJobExecutionService();
     private QueuesJobRunService jobRunService = new QueuesJobRunService();
     private QueuesStalledJobRecoveryService stalledJobRecoveryService = new QueuesStalledJobRecoveryService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesInvocableExecutionService() {
     }
@@ -24,16 +27,20 @@ public inherited sharing class QueuesInvocableExecutionService {
         final QueuesJobService jobService,
         final QueuesJobExecutionService jobExecutionService,
         final QueuesJobRunService jobRunService,
-        final QueuesStalledJobRecoveryService stalledJobRecoveryService
+        final QueuesStalledJobRecoveryService stalledJobRecoveryService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.jobService = jobService;
         this.jobExecutionService = jobExecutionService;
         this.jobRunService = jobRunService;
         this.stalledJobRecoveryService = stalledJobRecoveryService;
+        this.queueEventService = queueEventService;
     }
 
     public List<Job__c> claimDueJobsAsSystem(final Set<Id> jobIds) {
-        return jobService.claimInvocableJobsAsSystem(jobIds, QueuesSupport.now());
+        List<Job__c> claimedJobs = jobService.claimInvocableJobsAsSystem(jobIds, QueuesSupport.now());
+        queueEventService.publishActiveJobEvents(claimedJobs);
+        return claimedJobs;
     }
 
     public Job__c executeJobAsSystem(final Id jobId) {
@@ -88,6 +95,11 @@ public inherited sharing class QueuesInvocableExecutionService {
             }
             jobService.updateJobsAsSystem(stalledJobs);
             jobRunService.insertJobRunsAsSystem(runs);
+            queueEventService.publishStallRecoveryJobEvents(
+                stalledJobs,
+                runs,
+                INVOCABLE_STALLED_JOB_RECOVERY_COMPONENT
+            );
             recoveredCount += stalledJobs.size();
             if (stalledJobs.size() < recoverBatchSize) {
                 break;
@@ -121,6 +133,7 @@ public inherited sharing class QueuesInvocableExecutionService {
                 wakeUpdates.add(new Job__c(Id = staleJob.Id, AvailableAt__c = repairWakeAt));
             }
             jobService.updateJobsAsSystem(wakeUpdates);
+            queueEventService.publishRecoveredJobEvents(staleJobs, null, INVOCABLE_LOST_WAKE_RECOVERY_COMPONENT);
             repairedCount += wakeUpdates.size();
             if (staleJobs.size() < repairBatchSize) {
                 break;

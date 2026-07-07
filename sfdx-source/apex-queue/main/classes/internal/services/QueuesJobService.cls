@@ -8,6 +8,8 @@
 @SuppressWarnings('PMD.ApexDoc')
 public inherited sharing class QueuesJobService {
     private static final String JOB_NOT_FOUND_MESSAGE = 'Queue job "{0}" was not found.';
+    private static final String NULL_PROCESS_RESULT_MESSAGE = 'Processor returned a null ProcessResult.';
+    private static final String INVALID_JITTER_MESSAGE = 'jitter must be between 0 and 1';
     private static final Set<Queues.State> DUE_JOB_STATES = new Set<Queues.State>{
         Queues.State.WAITING,
         Queues.State.DELAYED
@@ -452,7 +454,7 @@ public inherited sharing class QueuesJobService {
     }
 
     public void applyResult(final Job__c job, final Queues.ProcessResult result, final Datetime now) {
-        QueuesSupport.isTrue(result != null, new Queues.QueueException('Processor returned a null ProcessResult.'));
+        QueuesSupport.isTrue(result != null, new Queues.QueueException(NULL_PROCESS_RESULT_MESSAGE));
 
         clearLease(job);
         job.Progress__c = result.getProgressJson();
@@ -592,7 +594,7 @@ public inherited sharing class QueuesJobService {
 
     // <editor-fold desc="Helpers">
     private static Queues.JobNotFoundException mapToJobNotFoundException(final Id jobId) {
-        return new Queues.JobNotFoundException(String.format(JOB_NOT_FOUND_MESSAGE, new List<String>{ jobId }));
+        return new Queues.JobNotFoundException(String.format(JOB_NOT_FOUND_MESSAGE, new List<Object>{ jobId }));
     }
 
     private static Datetime resolveAvailableAt(final Datetime now, final Queues.JobOptions options) {
@@ -618,7 +620,7 @@ public inherited sharing class QueuesJobService {
     }
 
     private static void validateBackoffJitter(final Decimal jitter) {
-        QueuesSupport.isTrue(jitter >= 0 && jitter <= 1, new Queues.QueueException('jitter must be between 0 and 1'));
+        QueuesSupport.isTrue(jitter >= 0 && jitter <= 1, new Queues.QueueException(INVALID_JITTER_MESSAGE));
     }
 
     @TestVisible
@@ -688,7 +690,7 @@ public inherited sharing class QueuesJobService {
     }
 
     private static String leaseTokenForJob(final Id jobId, final String leaseToken) {
-        return leaseToken + ':' + jobId;
+        return String.format('{0}:{1}', new List<Object>{ leaseToken, jobId });
     }
 
     private QueuesJobRepository getRepository(final Boolean asSystem) {

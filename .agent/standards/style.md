@@ -55,6 +55,44 @@ Good:
 'job:' + System.now().getTime();
 ```
 
+- For string interpolation in messages, names, or keys:
+    - Use concatenation for zero or one dynamic value.
+    - Use `String.format(...)` for two or more dynamic values.
+    - Prefer typed format arguments, or `List<Object>` for mixed types. Do not wrap
+      format arguments in `String.valueOf(...)` when they can be formatted
+      directly.
+    - Static SOQL fragments and field lists may use concatenation when that keeps
+      the query readable.
+- Exception message templates belong in `private static final` constants even
+  when they have zero or one dynamic value. This keeps a class's failure surface
+  visible at the top. Local non-exception strings may stay inline.
+
+Good:
+
+```apex
+'Value "' + value + '" is invalid.';
+```
+
+Bad:
+
+```apex
+'Value "' + value + '" for field "' + fieldName + '" is invalid.';
+```
+
+Good:
+
+```apex
+String.format('Value "{0}" for field "{1}" is invalid.', new List<Object>{ value, fieldName });
+```
+
+Good:
+
+```apex
+private static final String INVALID_VALUE_MESSAGE = 'Value "{0}" is invalid.';
+
+throw new QueueException(String.format(INVALID_VALUE_MESSAGE, new List<String>{ value }));
+```
+
 - Prefer `Map<Id, ...>` when the key is naturally a Salesforce id.
 
 Bad:
@@ -146,35 +184,37 @@ ctx.getTriggerId();
 
 - Keep class elements in this order:
 
-1. `public static final` constants
-2. `public static` fields
-3. `public final` fields
-4. `public` fields
-5. `private static final` constants
-6. `private static` fields
-7. `private final` fields
-8. `private` fields
-9. public accessors
-10. private accessors
-11. public constructors
-12. protected constructors
-13. private constructors
-14. public static methods
-15. public abstract methods
-16. public virtual methods
-17. public non-virtual methods
-18. protected abstract methods
-19. private static methods
-20. private virtual methods
-21. private non-virtual methods
-22. public enums
-23. public inner interfaces
-24. public abstract classes
-25. public classes
-26. private enums
-27. private inner interfaces
-28. private abstract classes
-29. private classes
+1. public static final constants
+2. public static fields
+3. public final fields
+4. public fields
+5. protected final fields
+6. protected fields
+7. private static final constants
+8. private static fields
+9. private final fields
+10. private fields
+11. public accessors
+12. private accessors
+13. public constructors
+14. protected constructors
+15. private constructors
+16. public static methods
+17. public abstract methods
+18. public virtual methods
+19. public non-virtual methods
+20. protected abstract methods
+21. private static methods
+22. private virtual methods
+23. private non-virtual methods
+24. public enums
+25. public inner interfaces
+26. public abstract classes
+27. public classes
+28. private enums
+29. private inner interfaces
+30. private abstract classes
+31. private classes
 
 - If a class has both public and private methods, separate them with named
   sections. Prefer specific public section names such as `Queries`, `DMLs`,

@@ -7,6 +7,8 @@
  */
 @SuppressWarnings('PMD.ApexDoc')
 public without sharing class QueuesInvocableAction {
+    private static final String INVALID_EXECUTE_INPUT_COUNT_MESSAGE = 'Invocable execute phase expects exactly one input.';
+
     // <editor-fold desc="Invocable">
     @InvocableMethod(Label='Queues Invocable Job Handoff' Callout=true)
     public static void run(final List<FlowInput> inputs) {
@@ -27,7 +29,7 @@ public without sharing class QueuesInvocableAction {
         if (!executeInputs.isEmpty()) {
             QueuesSupport.isTrue(
                 claimJobIds.isEmpty() && executeInputs.size() == 1,
-                new Queues.ConfigurationException('Invocable execute phase expects exactly one input.')
+                new Queues.ConfigurationException(INVALID_EXECUTE_INPUT_COUNT_MESSAGE)
             );
             executeSafely(service, executeInputs[0].jobId);
             return;

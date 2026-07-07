@@ -62,7 +62,8 @@ private class QueuesQueueAdminServiceTest {
                 (QueuesAsyncApexJobRepository) Test.createStub(QueuesAsyncApexJobRepository.class, asyncJobProvider),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -122,7 +123,8 @@ private class QueuesQueueAdminServiceTest {
                 (QueuesAsyncApexJobRepository) Test.createStub(QueuesAsyncApexJobRepository.class, asyncJobProvider),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -188,7 +190,8 @@ private class QueuesQueueAdminServiceTest {
                 (QueuesAsyncApexJobRepository) Test.createStub(QueuesAsyncApexJobRepository.class, asyncJobProvider),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -238,7 +241,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                workerStub
+                workerStub,
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -281,7 +285,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                workerStub
+                workerStub,
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -330,7 +335,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                workerStub
+                workerStub,
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -412,7 +418,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                workerStub
+                workerStub,
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -494,7 +501,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -562,7 +570,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -631,7 +640,8 @@ private class QueuesQueueAdminServiceTest {
             new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
             new QueuesStalledJobRecoveryService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -705,7 +715,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             for (Integer index = 1; index < Limits.getLimitQueueableJobs(); index++) {
@@ -775,7 +786,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -840,7 +852,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -938,7 +951,8 @@ private class QueuesQueueAdminServiceTest {
                 ),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1029,7 +1043,8 @@ private class QueuesQueueAdminServiceTest {
                 ),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1088,7 +1103,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1141,7 +1157,8 @@ private class QueuesQueueAdminServiceTest {
                 (QueuesWorkerService) Test.createStub(
                     QueuesWorkerService.class,
                     new QueuesTestSupport.RecordingStubProvider()
-                )
+                ),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1189,7 +1206,8 @@ private class QueuesQueueAdminServiceTest {
             new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
             new QueuesStalledJobRecoveryService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         for (Integer index = 0; index < Limits.getLimitQueueableJobs(); index++) {
@@ -1266,7 +1284,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                workerStub
+                workerStub,
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1316,7 +1335,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1568,7 +1588,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                workerStub
+                workerStub,
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1611,7 +1632,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+                new QueuesQueueEventService()
             );
 
             List<QueueError__c> fillerErrors = new List<QueueError__c>();
@@ -1671,7 +1693,8 @@ private class QueuesQueueAdminServiceTest {
                 (QueuesWorkerService) Test.createStub(
                     QueuesWorkerService.class,
                     new QueuesTestSupport.RecordingStubProvider()
-                )
+                ),
+                new QueuesQueueEventService()
             );
 
             List<QueueError__c> fillerErrors = new List<QueueError__c>();
@@ -1724,7 +1747,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+                new QueuesQueueEventService()
             );
 
             List<QueueError__c> fillerErrors = new List<QueueError__c>();
@@ -1774,7 +1798,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+                new QueuesQueueEventService()
             );
 
             List<QueueError__c> fillerErrors = new List<QueueError__c>();
@@ -1850,7 +1875,8 @@ private class QueuesQueueAdminServiceTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                workerStub
+                workerStub,
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1928,7 +1954,8 @@ private class QueuesQueueAdminServiceTest {
             new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
             new QueuesStalledJobRecoveryService(),
             new QueuesFlowProducerService(),
-            workerStub
+            workerStub,
+            new QueuesQueueEventService()
         );
     }
 

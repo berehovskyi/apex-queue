@@ -630,7 +630,8 @@ private class QueuesIntegrationTest {
                                 .withProgress(new Map<String, Object>{ 'step' => 'completed' })
                         )
                 ),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -696,7 +697,8 @@ private class QueuesIntegrationTest {
                             new Queues.UnrecoverableJobException('Unrecoverable processor failure.')
                         )
                 ),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -974,7 +976,8 @@ private class QueuesIntegrationTest {
                 new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesStalledJobRecoveryService(),
                 new QueuesFlowProducerService(),
-                workerStub
+                workerStub,
+                new QueuesQueueEventService()
             );
 
             QueuesMaintenanceService maintenanceService = new QueuesMaintenanceService(
@@ -987,7 +990,8 @@ private class QueuesIntegrationTest {
                 new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             insert new QueueRuntime__c(
@@ -1076,7 +1080,8 @@ private class QueuesIntegrationTest {
                 new QueuesScheduleRepository(System.AccessLevel.SYSTEM_MODE),
                 new QueuesInvocableExecutionService(),
                 new QueuesQueueableDispatchRepository(),
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             );
 
             // Act
@@ -1381,7 +1386,8 @@ private class QueuesIntegrationTest {
                 new QueuesJobService(),
                 new QueuesJobRunService(),
                 processorService,
-                new QueuesFlowProducerService()
+                new QueuesFlowProducerService(),
+                new QueuesQueueEventService()
             ),
             new QueuesJobService()
         );
@@ -1410,7 +1416,7 @@ private class QueuesIntegrationTest {
             final QueuesJobExecutionService jobExecutionService,
             final QueuesJobService jobService
         ) {
-            super(jobExecutionService, jobService);
+            super(jobExecutionService, jobService, new QueuesQueueEventService());
         }
 
         protected override Id enqueueExecutor(final Id jobId, final Integer delayMinutes) {

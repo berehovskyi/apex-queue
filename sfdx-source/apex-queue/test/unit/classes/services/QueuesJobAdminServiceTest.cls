@@ -13,7 +13,8 @@ private class QueuesJobAdminServiceTest {
             new QueuesRuntimeService(),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -57,7 +58,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            workerStub
+            workerStub,
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -104,7 +106,8 @@ private class QueuesJobAdminServiceTest {
                 queueableExecutionProvider
             ),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -159,7 +162,8 @@ private class QueuesJobAdminServiceTest {
                 queueableExecutionProvider
             ),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -206,7 +210,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -241,7 +246,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -275,7 +281,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         Datetime deferBaseline = System.now();
@@ -316,7 +323,8 @@ private class QueuesJobAdminServiceTest {
                 queueableExecutionProvider
             ),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         Datetime deferBaseline = System.now();
@@ -367,7 +375,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -409,7 +418,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -448,7 +458,8 @@ private class QueuesJobAdminServiceTest {
                 queueableExecutionProvider
             ),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -489,7 +500,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -526,7 +538,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -564,7 +577,8 @@ private class QueuesJobAdminServiceTest {
             ),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -602,7 +616,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+            (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -633,7 +648,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -665,7 +681,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         String failureMessage;
@@ -705,7 +722,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -738,7 +756,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -770,7 +789,8 @@ private class QueuesJobAdminServiceTest {
             (QueuesRuntimeService) Test.createStub(QueuesRuntimeService.class, runtimeProvider),
             new QueuesQueueableExecutionService(),
             new QueuesFlowProducerService(),
-            new QueuesWorkerService()
+            new QueuesWorkerService(),
+            new QueuesQueueEventService()
         );
 
         String failureMessage;

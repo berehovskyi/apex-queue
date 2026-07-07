@@ -9,6 +9,9 @@
 public inherited sharing class QueuesSupport {
     @TestVisible
     private static final String DEFAULT_EXCEPTION_REASON = 'Unknown error.';
+    private static final String NULL_ARGUMENT_MESSAGE = '{0} cannot be null';
+    private static final String BLANK_ARGUMENT_MESSAGE = '{0} cannot be blank';
+    private static final String INVALID_QUEUE_SCOPED_EXTERNAL_ID_LENGTH_MESSAGE = 'queueScopedExternalId must be 255 characters or fewer';
     private static final Set<String> GENERIC_EXCEPTION_REASONS = new Set<String>{ 'Script-thrown exception' };
     @TestVisible
     private static Decimal forcedRandom;
@@ -27,12 +30,21 @@ public inherited sharing class QueuesSupport {
     }
 
     public static void notNull(final Object value, final String argName) {
-        isTrue(value != null, new Queues.QueueException(argName + ' cannot be null'));
+        isTrue(
+            value != null,
+            new Queues.QueueException(String.format(NULL_ARGUMENT_MESSAGE, new List<String>{ argName }))
+        );
     }
 
     public static void notBlank(final String value, final String argName) {
-        isTrue(value != null, new Queues.QueueException(argName + ' cannot be null'));
-        isTrue(String.isNotBlank(value), new Queues.QueueException(argName + ' cannot be blank'));
+        isTrue(
+            value != null,
+            new Queues.QueueException(String.format(NULL_ARGUMENT_MESSAGE, new List<String>{ argName }))
+        );
+        isTrue(
+            String.isNotBlank(value),
+            new Queues.QueueException(String.format(BLANK_ARGUMENT_MESSAGE, new List<String>{ argName }))
+        );
     }
 
     public static Integer toInteger(final Object value, final Integer fallbackValue) {
@@ -65,6 +77,13 @@ public inherited sharing class QueuesSupport {
     public static Integer toPositiveInteger(final Object value, final Integer fallbackValue) {
         Integer resolvedValue = toInteger(value, fallbackValue);
         return resolvedValue > 0 ? resolvedValue : fallbackValue;
+    }
+
+    public static String truncate(final String value, final Integer maxLength) {
+        if (value == null || maxLength == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, Math.max(0, maxLength));
     }
 
     public static Id toId(final String value) {
@@ -218,11 +237,8 @@ public inherited sharing class QueuesSupport {
             return null;
         }
 
-        String queueScopedExternalId = queueName + ':' + externalId;
-        QueuesSupport.isTrue(
-            queueScopedExternalId.length() <= 255,
-            'queueScopedExternalId must be 255 characters or fewer'
-        );
+        String queueScopedExternalId = String.format('{0}:{1}', new List<String>{ queueName, externalId });
+        QueuesSupport.isTrue(queueScopedExternalId.length() <= 255, INVALID_QUEUE_SCOPED_EXTERNAL_ID_LENGTH_MESSAGE);
         return queueScopedExternalId;
     }
 
