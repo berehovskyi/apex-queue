@@ -370,6 +370,7 @@ private class QueuesJobSchedulerServiceTest {
             Assert.areEqual(2, scheduleRepositoryProvider.getCallCount('abortJob'));
             Assert.areEqual(0, scheduleRepositoryProvider.getCallCount('queryScheduledJobById'));
             Assert.areEqual(2, workerProvider.getCallCount('scheduleWorkerForJobs'));
+            Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
             List<QueueEvent__e> canceledEvents = publishedEventsByType(eventProvider, 'CANCELED');
             Assert.areEqual(1, canceledEvents.size());
             Assert.areEqual(String.valueOf(firstJob.Id), canceledEvents[0].JobId__c);
