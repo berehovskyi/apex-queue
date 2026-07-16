@@ -1,3 +1,8 @@
+---
+name: apex-testing
+description: Apex testing conventions for the apex-queue repository. Use when adding, changing, or reviewing unit, integration, or regression tests, including test naming, Arrange-Act-Assert structure, mocking, negative scenarios, security contexts, assertions, test isolation, and file organization.
+---
+
 # Testing Standards for apex-queue
 
 This document defines the requirements for writing high-quality Apex tests in this project. All agents and developers must adhere to these standards to ensure consistency and reliability.

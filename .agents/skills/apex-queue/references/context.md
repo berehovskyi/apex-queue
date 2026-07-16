@@ -1,6 +1,6 @@
 # Queue Framework Context
 
-Companion to `framework-invariants.md`. If the two disagree, the invariants
+Companion to `invariants.md`. If the two disagree, the invariants
 file wins.
 
 ## Purpose

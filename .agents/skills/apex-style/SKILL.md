@@ -1,3 +1,8 @@
+---
+name: apex-style
+description: Apex implementation and layout conventions for the apex-queue repository. Use when writing, refactoring, or reviewing Apex code in this project, especially for null handling, string formatting, control flow, class organization, sharing boundaries, and repository patterns.
+---
+
 # Style Standards
 
 ## General Code Shape
