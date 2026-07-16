@@ -1142,6 +1142,7 @@ public inherited sharing class QueuesJobSchedulerService {
                 QueuesJobService.applyCanceled(job, reason);
             }
             jobService.updateJobs(jobs);
+            queueEventService.publishCanceledJobEvents(jobs);
             flowProducerService.resolveParentDependenciesAsSystem(jobs);
             processedCount += jobs.size();
             if (jobs.size() < jobBatchSize) {
