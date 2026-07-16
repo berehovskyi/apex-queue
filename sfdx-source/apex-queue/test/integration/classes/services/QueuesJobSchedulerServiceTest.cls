@@ -307,11 +307,13 @@ private class QueuesJobSchedulerServiceTest {
                     }
                 );
             QueuesTestSupport.RecordingStubProvider workerProvider = new QueuesTestSupport.RecordingStubProvider();
+            QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
             QueuesJobSchedulerService service = newSchedulerService(
                 queueName,
                 (QueuesJobSchedulerSchedule) Test.createStub(QueuesJobSchedulerSchedule.class, scheduleProvider),
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
-                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider)
+                (QueuesWorkerService) Test.createStub(QueuesWorkerService.class, workerProvider),
+                QueuesTestSupport.newRecordingQueueEventService(queueName, 'CANCELED', eventProvider)
             );
 
             Job__c firstJob = service.upsertJobScheduler(
@@ -368,6 +370,9 @@ private class QueuesJobSchedulerServiceTest {
             Assert.areEqual(2, scheduleRepositoryProvider.getCallCount('abortJob'));
             Assert.areEqual(0, scheduleRepositoryProvider.getCallCount('queryScheduledJobById'));
             Assert.areEqual(2, workerProvider.getCallCount('scheduleWorkerForJobs'));
+            List<QueueEvent__e> canceledEvents = publishedEventsByType(eventProvider, 'CANCELED');
+            Assert.areEqual(1, canceledEvents.size());
+            Assert.areEqual(String.valueOf(firstJob.Id), canceledEvents[0].JobId__c);
         }
     }
 
@@ -1113,11 +1118,13 @@ private class QueuesJobSchedulerServiceTest {
                         )
                     }
                 );
+            QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
             QueuesJobSchedulerService service = newSchedulerService(
                 queueName,
                 new QueuesJobSchedulerSchedule(),
                 (QueuesScheduleRepository) Test.createStub(QueuesScheduleRepository.class, scheduleRepositoryProvider),
-                new QueuesWorkerService()
+                new QueuesWorkerService(),
+                QueuesTestSupport.newRecordingQueueEventService(queueName, 'CANCELED', eventProvider)
             );
 
             // Act
@@ -1151,6 +1158,10 @@ private class QueuesJobSchedulerServiceTest {
             Assert.areEqual(1, [SELECT COUNT() FROM JobRun__c WHERE Job__c = :pendingJob.Id]);
             Assert.areEqual(2, scheduleRepositoryProvider.getCallCount('abortJob'));
             Assert.areEqual(0, scheduleRepositoryProvider.getCallCount('queryScheduledJobById'));
+            Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+            List<QueueEvent__e> canceledEvents = publishedEventsByType(eventProvider, 'CANCELED');
+            Assert.areEqual(1, canceledEvents.size());
+            Assert.areEqual(String.valueOf(pendingJob.Id), canceledEvents[0].JobId__c);
         }
     }
 
@@ -2811,6 +2822,27 @@ private class QueuesJobSchedulerServiceTest {
         final QueuesJobSchedulerSchedule scheduleService,
         final QueuesScheduleRepository scheduleRepository,
         final QueuesWorkerService workerService,
+        final QueuesQueueEventService queueEventService
+    ) {
+        return newSchedulerService(
+            newDefinitionService(queueName, true),
+            new QueuesErrorService(),
+            new QueuesJobSchedulerRepository(),
+            new QueuesJobService(),
+            newProcessorService(queueName),
+            new QueuesQueueableDispatchService(),
+            scheduleRepository,
+            scheduleService,
+            workerService,
+            queueEventService
+        );
+    }
+
+    private static QueuesJobSchedulerService newSchedulerService(
+        final String queueName,
+        final QueuesJobSchedulerSchedule scheduleService,
+        final QueuesScheduleRepository scheduleRepository,
+        final QueuesWorkerService workerService,
         final QueuesJobSchedulerRepository schedulerRepository,
         final QueuesJobService jobService,
         final QueuesErrorService errorService,
@@ -2879,6 +2911,21 @@ private class QueuesJobSchedulerServiceTest {
             workerService,
             queueEventService
         );
+    }
+
+    private static List<QueueEvent__e> publishedEventsByType(
+        final QueuesTestSupport.RecordingStubProvider eventProvider,
+        final String eventType
+    ) {
+        List<QueueEvent__e> matchingEvents = new List<QueueEvent__e>();
+        for (List<Object> callArgs : eventProvider.getCalls('publishQueueEvents')) {
+            for (QueueEvent__e eventRecord : (List<QueueEvent__e>) callArgs[0]) {
+                if (eventRecord.Type__c == eventType) {
+                    matchingEvents.add(eventRecord);
+                }
+            }
+        }
+        return matchingEvents;
     }
 
     private static QueuesErrorService newRecordingErrorService(
