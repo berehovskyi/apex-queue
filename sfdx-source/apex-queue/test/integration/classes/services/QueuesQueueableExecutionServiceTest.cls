@@ -242,6 +242,40 @@ private class QueuesQueueableExecutionServiceTest {
     }
 
     @IsTest
+    static void should_publish_failed_event_when_retry_enqueue_fails() {
+        // Arrange
+        String asyncApexJobId = QueuesTestSupport.fakeIdValue(AsyncApexJob.SObjectType, 913);
+        Job__c waitingJob = queueableJob(Queues.State.WAITING, 913);
+        QueuesTestSupport.RecordingStubProvider executionProvider = new QueuesTestSupport.RecordingStubProvider()
+            .withReturn('executeQueueableJob', waitingJob);
+        QueuesTestSupport.RecordingStubProvider jobServiceProvider = new QueuesTestSupport.RecordingStubProvider()
+            .withReturn('requireJobForUpdate', waitingJob)
+            .withReturn('updateJob', waitingJob);
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        TestableQueueableExecutionService service = new TestableQueueableExecutionService(
+            (QueuesJobExecutionService) Test.createStub(QueuesJobExecutionService.class, executionProvider),
+            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
+            QueuesTestSupport.newRecordingQueueEventService(
+                QueuesTestSupport.DEFAULT_QUEUE_NAME,
+                'FAILED',
+                eventProvider
+            )
+        );
+        service.enqueueException = new Queues.QueueException('async limit');
+
+        // Act
+        Job__c result = service.execute(waitingJob.Id, asyncApexJobId);
+
+        // Assert
+        Assert.areEqual(Queues.State.FAILED.name(), result.State__c);
+        Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+        List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+        Assert.areEqual(1, events.size());
+        Assert.areEqual(Queues.State.FAILED.name(), events[0].Type__c);
+        Assert.areEqual(waitingJob.Id, events[0].JobId__c);
+    }
+
+    @IsTest
     static void should_bridge_queueable_retry_when_native_enqueue_reports_async_exception() {
         // Arrange
         String asyncApexJobId = QueuesTestSupport.fakeIdValue(AsyncApexJob.SObjectType, 912);
@@ -505,6 +539,14 @@ private class QueuesQueueableExecutionServiceTest {
             final QueuesJobService jobService
         ) {
             super(jobExecutionService, jobService, new QueuesQueueEventService());
+        }
+
+        private TestableQueueableExecutionService(
+            final QueuesJobExecutionService jobExecutionService,
+            final QueuesJobService jobService,
+            final QueuesQueueEventService queueEventService
+        ) {
+            super(jobExecutionService, jobService, queueEventService);
         }
 
         protected override Id enqueueExecutor(final Id jobId, final Integer delayMinutes) {

@@ -355,10 +355,14 @@ public inherited sharing class QueuesQueueAdminService {
             return 0;
         }
 
+        List<Job__c> recoveredJobs = new List<Job__c>();
         for (Job__c staleJob : staleJobs) {
-            queueableExecutionService.enqueueJob(staleJob.Id);
+            Job__c recoveredJob = queueableExecutionService.enqueueJob(staleJob.Id);
+            if (recoveredJob != null && QueuesSupport.toState(recoveredJob.State__c) != Queues.State.FAILED) {
+                recoveredJobs.add(recoveredJob);
+            }
         }
-        queueEventService.publishRecoveredJobEvents(staleJobs, null, QUEUEABLE_HANDOFF_RECOVERY_COMPONENT);
+        queueEventService.publishRecoveredJobEvents(recoveredJobs, null, QUEUEABLE_HANDOFF_RECOVERY_COMPONENT);
         return staleJobs.size();
     }
 

@@ -103,7 +103,7 @@ public virtual inherited sharing class QueuesQueueableExecutionService extends Q
         QueuesQueueableTransportService.QueueableSubmission submission = prepareExecutorSubmission(currentJob, now);
         if (submission.isInvalidDelay()) {
             markInvalidQueueableDelay(currentJob, submission, now);
-            return jobService.updateJobAsSystem(currentJob);
+            return updateFailedJob(currentJob);
         }
         if (allowFutureBridge == true && shouldBridgeQueueableStack()) {
             return bridgeNextAttemptFromFuture(currentJob, now);
@@ -140,7 +140,13 @@ public virtual inherited sharing class QueuesQueueableExecutionService extends Q
             'Queueable retry enqueue failed: ' + QueuesSupport.resolveExceptionReason(ex),
             now
         );
-        return jobService.updateJobAsSystem(currentJob);
+        return updateFailedJob(currentJob);
+    }
+
+    private Job__c updateFailedJob(final Job__c job) {
+        Job__c updatedJob = jobService.updateJobAsSystem(job);
+        queueEventService.publishTerminalJobEvents(new List<Job__c>{ updatedJob }, null);
+        return updatedJob;
     }
     // </editor-fold>
 }
