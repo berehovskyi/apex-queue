@@ -1,3 +1,8 @@
+---
+name: apex-queue-audit
+description: Adversarial correctness, durability, security, concurrency, and release-readiness audit workflow for the Apex Queue framework. Use when auditing the framework, validating third-party review findings, assessing release readiness, or tracing async, locking, recovery, telemetry, scheduler, queueable, invocable, maintenance, and dependency-graph risks.
+---
+
 # Framework Audit Prompt
 
 Use this prompt when asking another model or reviewer to audit the Apex Queue
@@ -22,8 +27,8 @@ Before reporting findings, inspect the code and relevant docs directly:
 - `sfdx-source/apex-queue/main`
 - `sfdx-source/apex-queue/test`
 - `e2e/test`
-- `.agent/context/invariants.md`
-- `.agent/context/roadmap.md`
+- `.agents/skills/apex-queue/references/invariants.md`
+- `.agents/skills/apex-queue/references/roadmap.md`
 - `README.md`
 
 Do not rely on summaries alone. If a claim depends on platform behavior, either
@@ -72,7 +77,7 @@ Validate the implementation against these principles:
 
 ## Audit Procedure
 
-1. Read `.agent/context/invariants.md` first.
+1. Read `.agents/skills/apex-queue/references/invariants.md` first.
 2. Map all state transitions for:
    `Job__c`, `QueueRuntime__c`, `QueueableDispatch__c`, `JobScheduler__c`,
    `JobRun__c`, and `QueueError__c`.
