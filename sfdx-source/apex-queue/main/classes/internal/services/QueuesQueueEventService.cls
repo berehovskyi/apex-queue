@@ -132,6 +132,13 @@ public inherited sharing class QueuesQueueEventService {
         if (scheduler == null || job == null) {
             return;
         }
+
+        QueueDefinition__mdt definition = findDefinition(job.QueueName__c);
+        Set<QueueEventType> publishedTypes = resolvePublishedTypes(definition);
+        if (!publishedTypes.contains(QueueEventType.SCHEDULER_MATERIALIZED)) {
+            return;
+        }
+
         QueueEvent__e eventRecord = mapJobEvent(
             QueueEventType.SCHEDULER_MATERIALIZED,
             job,

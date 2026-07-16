@@ -275,6 +275,62 @@ private class QueuesQueueEventServiceTest {
     }
 
     @IsTest
+    static void should_skip_scheduler_materialization_when_events_are_disabled() {
+        // Arrange
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesQueueEventService service = newService((String) null, eventProvider, null);
+
+        // Act
+        service.publishSchedulerMaterialized(
+            QueuesTestSupport.jobScheduler(QueuesTestSupport.DEFAULT_QUEUE_NAME, 'event-disabled'),
+            job(Queues.State.WAITING, 752)
+        );
+
+        // Assert
+        Assert.areEqual(0, eventProvider.getCallCount('publishQueueEvents'));
+    }
+
+    @IsTest
+    static void should_skip_scheduler_materialization_when_event_type_is_not_enabled() {
+        // Arrange
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesQueueEventService service = newService('CANCELED', eventProvider, null);
+
+        // Act
+        service.publishSchedulerMaterialized(
+            QueuesTestSupport.jobScheduler(QueuesTestSupport.DEFAULT_QUEUE_NAME, 'event-filtered'),
+            job(Queues.State.WAITING, 753)
+        );
+
+        // Assert
+        Assert.areEqual(0, eventProvider.getCallCount('publishQueueEvents'));
+    }
+
+    @IsTest
+    static void should_publish_scheduler_materialization_when_event_type_is_enabled() {
+        // Arrange
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesQueueEventService service = newService('SCHEDULER_MATERIALIZED', eventProvider, null);
+        JobScheduler__c scheduler = QueuesTestSupport.jobScheduler(
+            QueuesTestSupport.DEFAULT_QUEUE_NAME,
+            'event-enabled'
+        );
+        scheduler.Id = QueuesTestSupport.fakeId(JobScheduler__c.SObjectType, 754);
+        Job__c materializedJob = job(Queues.State.WAITING, 754);
+
+        // Act
+        service.publishSchedulerMaterialized(scheduler, materializedJob);
+
+        // Assert
+        Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+        List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+        Assert.areEqual(1, events.size());
+        Assert.areEqual('SCHEDULER_MATERIALIZED', events[0].Type__c);
+        Assert.areEqual(String.valueOf(materializedJob.Id), events[0].JobId__c);
+        Assert.areEqual(String.valueOf(scheduler.Id), events[0].JobSchedulerId__c);
+    }
+
+    @IsTest
     static void should_buffer_events_until_scope_commits() {
         // Arrange
         QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
