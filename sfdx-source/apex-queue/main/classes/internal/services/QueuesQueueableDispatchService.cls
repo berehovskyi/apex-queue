@@ -273,6 +273,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
             markQueueableSubmissionFailed(job, normalizedFailedReason, now);
         }
         jobRepository.updateJobs(uninitiatedJobs);
+        queueEventService.publishTerminalJobEvents(uninitiatedJobs, null);
 
         dispatch.State__c = Queues.QueueableDispatchState.FAILED.name();
         dispatch.FailedReason__c = normalizedFailedReason;
@@ -373,7 +374,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
         }
 
         jobRepository.updateJobs(new List<Job__c>{ job });
-        publishActiveJobs(new List<Job__c>{ job });
+        publishResolvedJobEvents(new List<Job__c>{ job });
         return markDispatchJobsResolved(dispatch, now, jobs.size());
     }
 
@@ -414,7 +415,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
         }
 
         jobRepository.updateJobs(jobsToUpdate);
-        publishActiveJobs(jobsToUpdate);
+        publishResolvedJobEvents(jobsToUpdate);
         return markDispatchJobsResolved(dispatch, now, jobs.size());
     }
 
@@ -453,11 +454,12 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
             job.QueueableDispatchInitiatedAt__c = now;
         }
         jobRepository.updateJobs(new List<Job__c>{ job });
-        publishActiveJobs(new List<Job__c>{ job });
+        publishResolvedJobEvents(new List<Job__c>{ job });
         return job;
     }
 
-    private void publishActiveJobs(final List<Job__c> jobs) {
+    @TestVisible
+    private void publishResolvedJobEvents(final List<Job__c> jobs) {
         List<Job__c> activeJobs = new List<Job__c>();
         for (Job__c job : jobs ?? new List<Job__c>()) {
             if (QueuesSupport.toState(job.State__c) == Queues.State.ACTIVE) {
@@ -465,6 +467,7 @@ public virtual inherited sharing class QueuesQueueableDispatchService extends Qu
             }
         }
         queueEventService.publishActiveJobEvents(activeJobs);
+        queueEventService.publishTerminalJobEvents(jobs, null);
     }
 
     private static Boolean isDispatchableQueueableJob(final Job__c job) {

@@ -588,6 +588,85 @@ private class QueuesQueueAdminServiceTest {
     }
 
     @IsTest
+    static void should_not_publish_recovered_when_stale_queueable_handoff_enqueue_fails() {
+        System.runAs(QueuesTestSupport.queueUser()) {
+            // Arrange
+            String queueName = 'queue-admin-recover-queueable-failed-handoff';
+            QueueDefinition__mdt queueDefinition = QueuesTestSupport.queueDefinition(queueName, false);
+            Job__c firstStaleJob = QueuesTestSupport.job(
+                queueName,
+                'sync',
+                Queues.State.WAITING.name(),
+                'queueable-stale-success'
+            );
+            firstStaleJob.Id = QueuesTestSupport.fakeId(Job__c.SObjectType, 815);
+            firstStaleJob.ExecutionMode__c = Queues.ExecutionMode.QUEUEABLE_CONCURRENT.name();
+            firstStaleJob.QueueableDispatchInitiatedAt__c = System.now().addMinutes(-10);
+            Job__c secondStaleJob = firstStaleJob.clone(true, true, false, false);
+            secondStaleJob.Id = QueuesTestSupport.fakeId(Job__c.SObjectType, 816);
+            secondStaleJob.ExternalId__c = 'queueable-stale-failure';
+            Job__c recoveredJob = firstStaleJob.clone(true, true, false, false);
+            recoveredJob.State__c = Queues.State.ACTIVE.name();
+            Job__c failedJob = secondStaleJob.clone(true, true, false, false);
+            failedJob.State__c = Queues.State.FAILED.name();
+            QueueRuntime__c runtime = QueuesTestSupport.runtime(queueName, false, 0);
+            runtime.WorkerToken__c = '';
+
+            QueuesTestSupport.RecordingStubProvider jobServiceProvider = new QueuesTestSupport.RecordingStubProvider()
+                .withReturn('queryExpiredActiveJobsForUpdate', new List<Job__c>())
+                .withReturn(
+                    'queryStaleInitiatedQueueableJobsForUpdate',
+                    new List<Job__c>{ firstStaleJob, secondStaleJob }
+                )
+                .withReturn('queryExpiredActiveQueueableJobsForUpdate', new List<Job__c>())
+                .withReturn('hasActiveJobs', false);
+            QueuesTestSupport.RecordingStubProvider queueableExecutionProvider = new QueuesTestSupport.RecordingStubProvider()
+                .withReturns('enqueueJob', new List<Object>{ recoveredJob, failedJob });
+            QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+            QueuesQueueAdminService service = new QueuesQueueAdminService(
+                (QueuesDefinitionService) Test.createStub(
+                    QueuesDefinitionService.class,
+                    new QueuesTestSupport.RecordingStubProvider()
+                        .withReturn('requireQueueDefinition', queueDefinition)
+                        .withReturn('getLeaseMinutes', 5)
+                ),
+                (QueuesRuntimeService) Test.createStub(
+                    QueuesRuntimeService.class,
+                    new QueuesTestSupport.RecordingStubProvider()
+                        .withReturn('ensureRuntime', runtime)
+                        .withReturn('lockRuntime', runtime)
+                        .withReturn('shouldClearStaleWorker', false)
+                        .withReturn('updateRuntime', runtime)
+                ),
+                (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
+                new QueuesJobRunService(),
+                new QueuesQueueableDispatchService(),
+                (QueuesQueueableExecutionService) Test.createStub(
+                    QueuesQueueableExecutionService.class,
+                    queueableExecutionProvider
+                ),
+                new QueuesAsyncApexJobRepository(System.AccessLevel.SYSTEM_MODE),
+                new QueuesStalledJobRecoveryService(),
+                new QueuesFlowProducerService(),
+                new QueuesWorkerService(),
+                QueuesTestSupport.newRecordingQueueEventService(queueName, 'RECOVERED', eventProvider)
+            );
+
+            // Act
+            Integer recoveredCount = service.recoverStalled(queueName);
+
+            // Assert
+            Assert.areEqual(2, recoveredCount);
+            Assert.areEqual(2, queueableExecutionProvider.getCallCount('enqueueJob'));
+            Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+            List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+            Assert.areEqual(1, events.size());
+            Assert.areEqual('RECOVERED', events[0].Type__c);
+            Assert.areEqual(String.valueOf(recoveredJob.Id), events[0].JobId__c);
+        }
+    }
+
+    @IsTest
     @SuppressWarnings('PMD.OperationWithLimitsInLoop')
     static void should_recover_stale_queueable_dispatches_before_initiated_jobs() {
         // Arrange
