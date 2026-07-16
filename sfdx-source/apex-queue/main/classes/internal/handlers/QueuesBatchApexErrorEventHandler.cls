@@ -9,12 +9,14 @@
 public without sharing class QueuesBatchApexErrorEventHandler {
     private static final String BATCH_WORKER_CLASS_NAME = QueuesBatchableWorker.class.getName();
     private static final String EXECUTE_PHASE = 'EXECUTE';
+    private static final String BATCH_WORKER_FAILURE_RECOVERY_COMPONENT = 'batch worker failure recovery';
 
     private QueuesAsyncApexJobRepository asyncApexJobRepository = new QueuesAsyncApexJobRepository(
         System.AccessLevel.SYSTEM_MODE
     );
     private QueuesJobRunService jobRunService = new QueuesJobRunService();
     private QueuesJobService jobService = new QueuesJobService();
+    private QueuesQueueEventService queueEventService = new QueuesQueueEventService();
 
     public QueuesBatchApexErrorEventHandler() {
     }
@@ -23,11 +25,13 @@ public without sharing class QueuesBatchApexErrorEventHandler {
     private QueuesBatchApexErrorEventHandler(
         final QueuesAsyncApexJobRepository asyncApexJobRepository,
         final QueuesJobRunService jobRunService,
-        final QueuesJobService jobService
+        final QueuesJobService jobService,
+        final QueuesQueueEventService queueEventService
     ) {
         this.asyncApexJobRepository = asyncApexJobRepository;
         this.jobRunService = jobRunService;
         this.jobService = jobService;
+        this.queueEventService = queueEventService;
     }
 
     // <editor-fold desc="Commands">
@@ -184,6 +188,7 @@ public without sharing class QueuesBatchApexErrorEventHandler {
 
         jobService.updateJobsAsSystem(jobsToUpdate);
         jobRunService.insertJobRunsAsSystem(runs);
+        queueEventService.publishStallRecoveryJobEvents(jobsToUpdate, runs, BATCH_WORKER_FAILURE_RECOVERY_COMPONENT);
     }
 
     private JobRun__c mapToFailedRun(

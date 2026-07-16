@@ -149,7 +149,8 @@ private class QueuesBatchApexErrorEventHandlerTest {
         QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
             new QueuesAsyncApexJobRepository(),
             jobRunServiceStub,
-            jobServiceStub
+            jobServiceStub,
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -186,6 +187,105 @@ private class QueuesBatchApexErrorEventHandlerTest {
     }
 
     @IsTest
+    static void should_publish_recovered_event_when_batch_failure_is_retryable() {
+        // Arrange
+        Datetime occurredAt = System.now();
+        String asyncApexJobId = QueuesTestSupport.fakeIdValue(AsyncApexJob.SObjectType, 61);
+        Job__c activeJob = QueuesTestSupport.job(Queues.State.ACTIVE.name());
+        activeJob.Id = QueuesTestSupport.fakeId(Job__c.SObjectType, 261);
+        activeJob.AttemptsMade__c = 0;
+        activeJob.MaxAttempts__c = 2;
+        activeJob.AsyncApexJobId__c = asyncApexJobId;
+        QueuesTestSupport.RecordingStubProvider jobRepositoryProvider = new QueuesTestSupport.RecordingStubProvider()
+            .withReturn('queryJobsByIdsForUpdate', new List<Job__c>{ activeJob });
+        QueuesTestSupport.RecordingStubProvider jobRunProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
+            new QueuesAsyncApexJobRepository(),
+            (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, jobRunProvider),
+            newJobService(jobRepositoryProvider),
+            QueuesTestSupport.newRecordingQueueEventService(
+                QueuesTestSupport.DEFAULT_QUEUE_NAME,
+                'RECOVERED;STALLED;FAILED',
+                eventProvider
+            )
+        );
+
+        // Act
+        handler.handleFailureScopes(
+            new List<QueuesBatchApexErrorEventHandler.FailureScope>{
+                new QueuesBatchApexErrorEventHandler.FailureScope(
+                    new Set<Id>{ activeJob.Id },
+                    asyncApexJobId,
+                    occurredAt,
+                    'batch scope failed',
+                    'stack trace'
+                )
+            }
+        );
+
+        // Assert
+        Assert.areEqual(Queues.State.WAITING.name(), activeJob.State__c);
+        Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+        List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+        Assert.areEqual(1, events.size());
+        Assert.areEqual('RECOVERED', events[0].Type__c);
+        Assert.areEqual(String.valueOf(activeJob.Id), events[0].JobId__c);
+        Assert.areEqual('batch worker failure recovery', events[0].Component__c);
+    }
+
+    @IsTest
+    static void should_publish_stalled_and_failed_events_when_batch_failure_exhausts_attempts() {
+        // Arrange
+        Datetime occurredAt = System.now();
+        String asyncApexJobId = QueuesTestSupport.fakeIdValue(AsyncApexJob.SObjectType, 62);
+        Job__c activeJob = QueuesTestSupport.job(Queues.State.ACTIVE.name());
+        activeJob.Id = QueuesTestSupport.fakeId(Job__c.SObjectType, 262);
+        activeJob.AttemptsMade__c = 0;
+        activeJob.MaxAttempts__c = 1;
+        activeJob.AsyncApexJobId__c = asyncApexJobId;
+        QueuesTestSupport.RecordingStubProvider jobRepositoryProvider = new QueuesTestSupport.RecordingStubProvider()
+            .withReturn('queryJobsByIdsForUpdate', new List<Job__c>{ activeJob });
+        QueuesTestSupport.RecordingStubProvider jobRunProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
+            new QueuesAsyncApexJobRepository(),
+            (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, jobRunProvider),
+            newJobService(jobRepositoryProvider),
+            QueuesTestSupport.newRecordingQueueEventService(
+                QueuesTestSupport.DEFAULT_QUEUE_NAME,
+                'RECOVERED;STALLED;FAILED',
+                eventProvider
+            )
+        );
+
+        // Act
+        handler.handleFailureScopes(
+            new List<QueuesBatchApexErrorEventHandler.FailureScope>{
+                new QueuesBatchApexErrorEventHandler.FailureScope(
+                    new Set<Id>{ activeJob.Id },
+                    asyncApexJobId,
+                    occurredAt,
+                    'batch scope failed',
+                    'stack trace'
+                )
+            }
+        );
+
+        // Assert
+        Assert.areEqual(Queues.State.FAILED.name(), activeJob.State__c);
+        Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+        List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+        Assert.areEqual(2, events.size());
+        Assert.areEqual('STALLED', events[0].Type__c);
+        Assert.areEqual(String.valueOf(activeJob.Id), events[0].JobId__c);
+        Assert.areEqual('FAILED', events[1].Type__c);
+        Assert.areEqual(String.valueOf(activeJob.Id), events[1].JobId__c);
+        Assert.areEqual('batch worker failure recovery', events[0].Component__c);
+        Assert.areEqual('batch worker failure recovery', events[1].Component__c);
+    }
+
+    @IsTest
     static void should_ignore_failure_scope_when_job_claim_owner_points_to_newer_async_worker() {
         // Arrange
         String staleAsyncApexJobId = QueuesTestSupport.fakeIdValue(AsyncApexJob.SObjectType, 31);
@@ -201,7 +301,8 @@ private class QueuesBatchApexErrorEventHandlerTest {
         QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
             new QueuesAsyncApexJobRepository(),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, jobRunProvider),
-            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider)
+            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -349,7 +450,8 @@ private class QueuesBatchApexErrorEventHandlerTest {
         QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
             (QueuesAsyncApexJobRepository) Test.createStub(QueuesAsyncApexJobRepository.class, asyncRepositoryProvider),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, jobRunProvider),
-            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider)
+            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -370,7 +472,8 @@ private class QueuesBatchApexErrorEventHandlerTest {
         QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
             new QueuesAsyncApexJobRepository(),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, jobRunProvider),
-            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider)
+            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -436,7 +539,8 @@ private class QueuesBatchApexErrorEventHandlerTest {
         QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
             new QueuesAsyncApexJobRepository(),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, jobRunProvider),
-            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider)
+            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -499,7 +603,8 @@ private class QueuesBatchApexErrorEventHandlerTest {
         QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
             new QueuesAsyncApexJobRepository(),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, jobRunProvider),
-            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider)
+            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -544,7 +649,8 @@ private class QueuesBatchApexErrorEventHandlerTest {
         QueuesBatchApexErrorEventHandler handler = new QueuesBatchApexErrorEventHandler(
             new QueuesAsyncApexJobRepository(),
             (QueuesJobRunService) Test.createStub(QueuesJobRunService.class, jobRunProvider),
-            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider)
+            (QueuesJobService) Test.createStub(QueuesJobService.class, jobServiceProvider),
+            new QueuesQueueEventService()
         );
 
         // Act
@@ -573,6 +679,13 @@ private class QueuesBatchApexErrorEventHandlerTest {
         Assert.areEqual(2, runs.size());
         Assert.areEqual(Queues.RunStatus.FAILED.name(), runs[0].Status__c);
         Assert.areEqual(Queues.RunStatus.FAILED.name(), runs[1].Status__c);
+    }
+
+    private static QueuesJobService newJobService(final QueuesTestSupport.RecordingStubProvider jobRepositoryProvider) {
+        return new QueuesJobService(
+            (QueuesJobRepository) Test.createStub(QueuesJobRepository.class, jobRepositoryProvider),
+            new QueuesDefinitionService()
+        );
     }
 
     private static AsyncApexJob asyncApexJobWithParent(
