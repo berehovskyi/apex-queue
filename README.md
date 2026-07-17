@@ -1197,7 +1197,10 @@ Map<Queues.State, Integer> counts = Queues.of('invoice-sync').getJobCounts();
 
 Queues can publish optional `QueueEvent__e` platform events after commit. Leave
 `PublishedEventTypes__c` blank to disable events for a queue, set it to `ALL`,
-or provide a semicolon-separated list of event types.
+or provide a semicolon-separated list of event types. Unsupported tokens are
+reported as queue errors and ignored, while supported tokens remain enabled.
+`ALL` enables every supported type regardless of its position, and other tokens
+in the list are still validated.
 
 | Type                     | Meaning                                             |
 | ------------------------ | --------------------------------------------------- |

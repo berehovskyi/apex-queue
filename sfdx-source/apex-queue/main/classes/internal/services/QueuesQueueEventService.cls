@@ -262,13 +262,15 @@ public inherited sharing class QueuesQueueEventService {
         }
 
         Set<QueueEventType> types = new Set<QueueEventType>();
+        Boolean publishesAll = false;
         for (String token : rawTypes.split(TYPE_SEPARATOR)) {
             String typeName = QueuesSupport.normalizeEnumValue(token);
             if (String.isBlank(typeName)) {
                 continue;
             }
             if (typeName == ALL_TOKEN) {
-                return supportedTypes();
+                publishesAll = true;
+                continue;
             }
             QueueEventType typeValue = TYPES_BY_NAME.get(typeName);
             if (typeValue == null) {
@@ -278,11 +280,11 @@ public inherited sharing class QueuesQueueEventService {
                         String.format(UNSUPPORTED_EVENT_TYPE_MESSAGE, new List<String>{ queueName, token })
                     )
                 );
-                return new Set<QueueEventType>();
+                continue;
             }
             types.add(typeValue);
         }
-        return types;
+        return publishesAll ? supportedTypes() : types;
     }
 
     private void publishJobEvents(
