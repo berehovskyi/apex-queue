@@ -19,16 +19,16 @@ public inherited sharing class QueuesQueueEventService {
     @TestVisible
     private static List<Integer> scopeStartIndexes = new List<Integer>();
 
+    private QueuesDefinitionService definitionService = new QueuesDefinitionService();
+    private QueuesErrorService errorService = new QueuesErrorService();
+    private QueuesQueueEventRepository eventRepository = new QueuesQueueEventRepository(System.AccessLevel.SYSTEM_MODE);
+
     static {
         for (QueueEventType typeValue : QueueEventType.values()) {
             SUPPORTED_TYPES.add(typeValue);
             TYPES_BY_NAME.put(typeValue.name(), typeValue);
         }
     }
-
-    private QueuesDefinitionService definitionService = new QueuesDefinitionService();
-    private QueuesErrorService errorService = new QueuesErrorService();
-    private QueuesQueueEventRepository eventRepository = new QueuesQueueEventRepository(System.AccessLevel.SYSTEM_MODE);
 
     public QueuesQueueEventService() {
     }
