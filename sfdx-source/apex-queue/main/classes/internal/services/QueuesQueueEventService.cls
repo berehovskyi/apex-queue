@@ -12,30 +12,19 @@ public inherited sharing class QueuesQueueEventService {
     private static final String QUEUE_EVENTS_COMPONENT = 'queue events';
     private static final String UNSUPPORTED_EVENT_TYPE_MESSAGE = 'Queue "{0}" has unsupported PublishedEventTypes__c token "{1}".';
     private static final Integer REASON_MAX_LENGTH = 32768;
-    private static final Set<QueueEventType> SUPPORTED_TYPES = new Set<QueueEventType>{
-        QueueEventType.ACTIVE,
-        QueueEventType.COMPLETED,
-        QueueEventType.FAILED,
-        QueueEventType.CANCELED,
-        QueueEventType.STALLED,
-        QueueEventType.RECOVERED,
-        QueueEventType.SCHEDULER_MATERIALIZED,
-        QueueEventType.CLEANED
-    };
-    private static final Map<String, QueueEventType> TYPES_BY_NAME = new Map<String, QueueEventType>{
-        'ACTIVE' => QueueEventType.ACTIVE,
-        'COMPLETED' => QueueEventType.COMPLETED,
-        'FAILED' => QueueEventType.FAILED,
-        'CANCELED' => QueueEventType.CANCELED,
-        'STALLED' => QueueEventType.STALLED,
-        'RECOVERED' => QueueEventType.RECOVERED,
-        'SCHEDULER_MATERIALIZED' => QueueEventType.SCHEDULER_MATERIALIZED,
-        'CLEANED' => QueueEventType.CLEANED
-    };
+    private static final Set<QueueEventType> SUPPORTED_TYPES = new Set<QueueEventType>();
+    private static final Map<String, QueueEventType> TYPES_BY_NAME = new Map<String, QueueEventType>();
     @TestVisible
     private static List<QueueEvent__e> scopedEvents = new List<QueueEvent__e>();
     @TestVisible
     private static List<Integer> scopeStartIndexes = new List<Integer>();
+
+    static {
+        for (QueueEventType typeValue : QueueEventType.values()) {
+            SUPPORTED_TYPES.add(typeValue);
+            TYPES_BY_NAME.put(typeValue.name(), typeValue);
+        }
+    }
 
     private QueuesDefinitionService definitionService = new QueuesDefinitionService();
     private QueuesErrorService errorService = new QueuesErrorService();
