@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>PublishedEventTypes__c</fullName>
-    <description>Optional semicolon-separated queue event types published for this queue. Blank disables events; ALL publishes every supported type. Supported values: ACTIVE; COMPLETED; FAILED; CANCELED; STALLED; RECOVERED; SCHEDULER_MATERIALIZED; CLEANED.</description>
+    <description>Optional semicolon-separated queue event types published for this queue. Blank disables events; ALL publishes every supported type. Unsupported tokens are reported as queue errors and ignored, while supported tokens remain enabled. Supported values: ACTIVE; COMPLETED; FAILED; CANCELED; STALLED; RECOVERED; SCHEDULER_MATERIALIZED; CLEANED.</description>
     <fieldManageability>SubscriberControlled</fieldManageability>
-    <inlineHelpText>Use blank to disable queue events, ALL for all events, or a semicolon-separated list such as FAILED;CANCELED.</inlineHelpText>
+    <inlineHelpText>Use blank to disable queue events, ALL for all events, or a semicolon-separated list such as FAILED;CANCELED. Unsupported tokens are reported and ignored.</inlineHelpText>
     <label>Published Event Types</label>
     <length>255</length>
     <required>false</required>

@@ -110,6 +110,69 @@ private class QueuesQueueEventServiceTest {
     }
 
     @IsTest
+    static void should_publish_valid_types_when_explicit_list_contains_invalid_token() {
+        // Arrange
+        QueuesErrorService.resetEmittedErrorFingerprints();
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesTestSupport.RecordingStubProvider errorEventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesQueueEventService service = newService('COMPLETED;FAILD', eventProvider, errorEventProvider);
+        Job__c completedJob = job(Queues.State.COMPLETED, 402);
+
+        // Act
+        service.publishTerminalJobEvents(new List<Job__c>{ completedJob }, null);
+
+        // Assert
+        Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+        List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+        Assert.areEqual(1, events.size());
+        Assert.areEqual('COMPLETED', events[0].Type__c);
+        Assert.areEqual(completedJob.Id, events[0].JobId__c);
+        Assert.areEqual(1, errorEventProvider.getCallCount('publishQueueError'));
+    }
+
+    @IsTest
+    static void should_publish_all_types_and_report_trailing_invalid_token() {
+        // Arrange
+        QueuesErrorService.resetEmittedErrorFingerprints();
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesTestSupport.RecordingStubProvider errorEventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesQueueEventService service = newService('ALL;FAILD', eventProvider, errorEventProvider);
+        Job__c failedJob = job(Queues.State.FAILED, 403);
+
+        // Act
+        service.publishTerminalJobEvents(new List<Job__c>{ failedJob }, null);
+
+        // Assert
+        Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+        List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+        Assert.areEqual(1, events.size());
+        Assert.areEqual('FAILED', events[0].Type__c);
+        Assert.areEqual(failedJob.Id, events[0].JobId__c);
+        Assert.areEqual(1, errorEventProvider.getCallCount('publishQueueError'));
+    }
+
+    @IsTest
+    static void should_publish_all_types_and_report_leading_invalid_token() {
+        // Arrange
+        QueuesErrorService.resetEmittedErrorFingerprints();
+        QueuesTestSupport.RecordingStubProvider eventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesTestSupport.RecordingStubProvider errorEventProvider = new QueuesTestSupport.RecordingStubProvider();
+        QueuesQueueEventService service = newService('FAILD;ALL', eventProvider, errorEventProvider);
+        Job__c failedJob = job(Queues.State.FAILED, 404);
+
+        // Act
+        service.publishTerminalJobEvents(new List<Job__c>{ failedJob }, null);
+
+        // Assert
+        Assert.areEqual(1, eventProvider.getCallCount('publishQueueEvents'));
+        List<QueueEvent__e> events = (List<QueueEvent__e>) eventProvider.getLastArgs('publishQueueEvents')[0];
+        Assert.areEqual(1, events.size());
+        Assert.areEqual('FAILED', events[0].Type__c);
+        Assert.areEqual(failedJob.Id, events[0].JobId__c);
+        Assert.areEqual(1, errorEventProvider.getCallCount('publishQueueError'));
+    }
+
+    @IsTest
     static void should_skip_eventing_errors_without_queue_name() {
         // Arrange
         QueuesErrorService.resetEmittedErrorFingerprints();

@@ -170,7 +170,7 @@ _Checkbox_
 
 ### Published Event Types
 
-Optional semicolon-separated queue event types published for this queue. Blank disables events; ALL publishes every supported type. Supported values: ACTIVE; COMPLETED; FAILED; CANCELED; STALLED; RECOVERED; SCHEDULER_MATERIALIZED; CLEANED.
+Optional semicolon-separated queue event types published for this queue. Blank disables events; ALL publishes every supported type. Unsupported tokens are reported as queue errors and ignored, while supported tokens remain enabled. Supported values: ACTIVE; COMPLETED; FAILED; CANCELED; STALLED; RECOVERED; SCHEDULER_MATERIALIZED; CLEANED.
 
 **API Name**
 
